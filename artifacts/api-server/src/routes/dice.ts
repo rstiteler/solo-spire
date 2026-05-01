@@ -1,7 +1,10 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/requireAuth";
 import { RollDiceBody } from "@workspace/api-zod";
 
 const router = Router();
+
+router.use(requireAuth);
 
 function rollDie(sides: number): number {
   return Math.floor(Math.random() * sides) + 1;
@@ -15,12 +18,7 @@ function parseDiceExpression(expression: string): {
 } {
   const expr = expression.toLowerCase().trim();
 
-  // Handle "4d6kh3" (keep highest 3) and "4d6kl3" (keep lowest 3)
   const keepHighMatch = expr.match(/^(\d+)d(\d+)kh(\d+)([+-]\d+)?$/);
-  const keepLowMatch = expr.match(/^(\d+)d(\d+)kl(\d+)([+-]\d+)?$/);
-  const standardMatch = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
-  const modOnlyMatch = expr.match(/^([+-]?\d+)$/);
-
   if (keepHighMatch) {
     const count = parseInt(keepHighMatch[1]);
     const sides = parseInt(keepHighMatch[2]);
@@ -35,6 +33,7 @@ function parseDiceExpression(expression: string): {
     return { total, rolls: allRolls, modifier, details };
   }
 
+  const keepLowMatch = expr.match(/^(\d+)d(\d+)kl(\d+)([+-]\d+)?$/);
   if (keepLowMatch) {
     const count = parseInt(keepLowMatch[1]);
     const sides = parseInt(keepLowMatch[2]);
@@ -48,6 +47,7 @@ function parseDiceExpression(expression: string): {
     return { total, rolls: allRolls, modifier, details };
   }
 
+  const standardMatch = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
   if (standardMatch) {
     const count = parseInt(standardMatch[1]);
     const sides = parseInt(standardMatch[2]);
@@ -60,12 +60,12 @@ function parseDiceExpression(expression: string): {
     return { total, rolls, modifier, details };
   }
 
+  const modOnlyMatch = expr.match(/^([+-]?\d+)$/);
   if (modOnlyMatch) {
     const value = parseInt(modOnlyMatch[1]);
     return { total: value, rolls: [value], modifier: value, details: String(value) };
   }
 
-  // Fallback: single d20
   const roll = rollDie(20);
   return { total: roll, rolls: [roll], modifier: 0, details: String(roll) };
 }

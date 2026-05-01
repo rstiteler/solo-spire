@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { chatMessages, characters, campaigns, quests, inventoryItems } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { requireAuth } from "../middlewares/requireAuth";
 import {
   ListMessagesParams,
   SendMessageParams,
@@ -10,6 +11,8 @@ import {
 } from "@workspace/api-zod";
 
 const router = Router();
+
+router.use(requireAuth);
 
 const DM_SYSTEM_PROMPT = `You are a skilled, creative Dungeon Master for a solo D&D 5e campaign. The player is adventuring alone — you control all NPCs, enemies, and the world.
 
@@ -61,6 +64,11 @@ router.get("/campaigns/:campaignId/messages", async (req, res) => {
   if (!parsed.success) return void res.status(400).json({ error: parsed.error });
 
   try {
+    // Verify campaign ownership
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, parsed.data.campaignId), eq(campaigns.userId, req.userId)));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
     const messages = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.campaignId, parsed.data.campaignId))
@@ -82,15 +90,14 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
   const campaignId = paramsParsed.data.campaignId;
 
   try {
-    // Fetch campaign context
-    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, campaignId), eq(campaigns.userId, req.userId)));
     if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
 
     const [character] = await db.select().from(characters).where(eq(characters.campaignId, campaignId));
     const questList = await db.select().from(quests).where(eq(quests.campaignId, campaignId));
     const inventory = await db.select().from(inventoryItems).where(eq(inventoryItems.campaignId, campaignId));
 
-    // Build context string about current game state
     let contextBlock = `\n\n[CURRENT GAME STATE]`;
     if (campaign.currentScene) contextBlock += `\nScene: ${campaign.currentScene}`;
     if (campaign.currentLocation) contextBlock += `\nLocation: ${campaign.currentLocation}`;
@@ -118,22 +125,16 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       }
     }
     const activeQuests = questList.filter(q => q.status === "active");
-    if (activeQuests.length > 0) {
-      contextBlock += `\nActive Quests: ${activeQuests.map(q => q.title).join(", ")}`;
-    }
+    if (activeQuests.length > 0) contextBlock += `\nActive Quests: ${activeQuests.map(q => q.title).join(", ")}`;
     const equippedItems = inventory.filter(i => i.isEquipped);
-    if (equippedItems.length > 0) {
-      contextBlock += `\nEquipped: ${equippedItems.map(i => i.name).join(", ")}`;
-    }
+    if (equippedItems.length > 0) contextBlock += `\nEquipped: ${equippedItems.map(i => i.name).join(", ")}`;
     contextBlock += `\nGold: ${campaign.gold} gp`;
 
-    // Get chat history
     const history = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.campaignId, campaignId))
       .orderBy(asc(chatMessages.createdAt));
 
-    // Build message content including dice rolls if present
     let userContent = bodyParsed.data.content;
     if (bodyParsed.data.diceRolls && bodyParsed.data.diceRolls.length > 0) {
       const rollsText = bodyParsed.data.diceRolls.map(r =>
@@ -142,7 +143,6 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       userContent = `${rollsText}\n\n${userContent}`;
     }
 
-    // Save the user message
     await db.insert(chatMessages).values({
       campaignId,
       role: "user",
@@ -150,16 +150,12 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       diceRolls: bodyParsed.data.diceRolls ?? null,
     });
 
-    // Build messages for Claude
     const claudeMessages: Array<{ role: "user" | "assistant"; content: string }> = history.map(m => ({
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content,
     }));
-
-    // Add current user message
     claudeMessages.push({ role: "user", content: userContent + contextBlock });
 
-    // Set up SSE
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -181,7 +177,6 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       }
     }
 
-    // Parse out STATE_UPDATE and LEVEL_UP from response
     let cleanResponse = fullResponse;
     let stateUpdate: {
       quests?: Array<{ action: string; title: string; description?: string; isMain?: boolean }>;
@@ -196,9 +191,7 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       try {
         stateUpdate = JSON.parse(stateMatch[1]);
         cleanResponse = cleanResponse.replace(stateMatch[0], "").trim();
-      } catch {
-        // ignore parse errors
-      }
+      } catch { /* ignore */ }
     }
 
     const levelUpMatch = fullResponse.match(/<LEVEL_UP>true<\/LEVEL_UP>/);
@@ -207,19 +200,12 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       cleanResponse = cleanResponse.replace(levelUpMatch[0], "").trim();
     }
 
-    // Save AI response
-    await db.insert(chatMessages).values({
-      campaignId,
-      role: "assistant",
-      content: cleanResponse,
-    });
+    await db.insert(chatMessages).values({ campaignId, role: "assistant", content: cleanResponse });
 
-    // Apply state updates
     if (stateUpdate) {
       try {
-        // XP and gold updates
         if (stateUpdate.xp || stateUpdate.gold !== undefined) {
-          const campaignUpdate: Partial<typeof campaign> = {};
+          const campaignUpdate: { xp?: number; gold?: number } = {};
           if (stateUpdate.xp) {
             campaignUpdate.xp = (campaign.xp ?? 0) + stateUpdate.xp;
           }
@@ -227,53 +213,25 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
             campaignUpdate.gold = Math.max(0, (campaign.gold ?? 0) + stateUpdate.gold);
           }
           await db.update(campaigns).set({ ...campaignUpdate, updatedAt: new Date() }).where(eq(campaigns.id, campaignId));
-
-          // Also sync XP to character
           if (stateUpdate.xp && character) {
             await db.update(characters).set({ xp: (character.xp ?? 0) + stateUpdate.xp, updatedAt: new Date() }).where(eq(characters.campaignId, campaignId));
           }
         }
-
-        // Quest updates
         if (stateUpdate.quests) {
           for (const q of stateUpdate.quests) {
             if (q.action === "add") {
-              await db.insert(quests).values({
-                campaignId,
-                title: q.title,
-                description: q.description ?? null,
-                status: "active",
-                isMain: q.isMain ?? false,
-              });
-            } else if (q.action === "complete" || q.action === "fail") {
-              const [existing] = await db.select().from(quests)
-                .where(eq(quests.campaignId, campaignId));
-              if (existing) {
-                await db.update(quests)
-                  .set({ status: q.action === "complete" ? "completed" : "failed", updatedAt: new Date() })
-                  .where(eq(quests.campaignId, campaignId));
-              }
+              await db.insert(quests).values({ campaignId, title: q.title, description: q.description ?? null, status: "active", isMain: q.isMain ?? false });
             }
           }
         }
-
-        // Inventory updates
         if (stateUpdate.items) {
           for (const item of stateUpdate.items) {
             if (item.action === "add") {
               await db.insert(inventoryItems).values({
-                campaignId,
-                name: item.name,
+                campaignId, name: item.name,
                 itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
-                quantity: item.quantity ?? 1,
-                isEquipped: false,
+                quantity: item.quantity ?? 1, isEquipped: false,
               });
-            } else if (item.action === "remove") {
-              const [existing] = await db.select().from(inventoryItems)
-                .where(eq(inventoryItems.campaignId, campaignId));
-              if (existing) {
-                await db.delete(inventoryItems).where(eq(inventoryItems.id, existing.id));
-              }
             }
           }
         }
@@ -282,7 +240,6 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       }
     }
 
-    // Auto-save: update lastPlayedAt
     await db.update(campaigns).set({ lastPlayedAt: new Date(), updatedAt: new Date() }).where(eq(campaigns.id, campaignId));
 
     res.write(`data: ${JSON.stringify({ done: true, levelUp })}\n\n`);

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- Dark background circle -->
+  <circle cx="40" cy="40" r="38" fill="#0f1117" stroke="#f59e0b" stroke-width="2"/>
+  <!-- Stylized open book / grimoire -->
+  <path d="M20 52 Q20 28 40 26 Q60 28 60 52 L40 54 Z" fill="#1e2433"/>
+  <path d="M20 52 Q20 28 40 26 L40 54 Z" fill="#252d42"/>
+  <path d="M60 52 Q60 28 40 26 L40 54 Z" fill="#1a2030"/>
+  <!-- Spine of book -->
+  <line x1="40" y1="26" x2="40" y2="54" stroke="#f59e0b" stroke-width="1.5" opacity="0.8"/>
+  <!-- Page lines left -->
+  <line x1="26" y1="37" x2="39" y2="36" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <line x1="25" y1="42" x2="39" y2="41" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <line x1="25" y1="47" x2="39" y2="46" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <!-- Page lines right -->
+  <line x1="41" y1="36" x2="54" y2="37" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <line x1="41" y1="41" x2="55" y2="42" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <line x1="41" y1="46" x2="55" y2="47" stroke="#f59e0b" stroke-width="0.8" opacity="0.5"/>
+  <!-- D20 die icon at top -->
+  <polygon points="40,14 46,22 40,24 34,22" fill="#f59e0b" opacity="0.9"/>
+  <polygon points="34,22 40,24 34,30" fill="#d97706" opacity="0.9"/>
+  <polygon points="46,22 40,24 46,30" fill="#b45309" opacity="0.9"/>
+  <polygon points="34,30 40,24 46,30 40,32" fill="#f59e0b" opacity="0.7"/>
+</svg>

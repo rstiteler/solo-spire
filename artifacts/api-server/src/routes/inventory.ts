@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inventoryItems } from "@workspace/db";
+import { inventoryItems, campaigns } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { requireAuth } from "../middlewares/requireAuth";
 import {
   ListInventoryParams,
   AddInventoryItemParams,
@@ -13,12 +14,17 @@ import {
 
 const router = Router();
 
-// List inventory for a campaign
+router.use(requireAuth);
+
 router.get("/campaigns/:campaignId/inventory", async (req, res) => {
   const parsed = ListInventoryParams.safeParse({ campaignId: req.params.campaignId });
   if (!parsed.success) return void res.status(400).json({ error: parsed.error });
 
   try {
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, parsed.data.campaignId), eq(campaigns.userId, req.userId)));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
     const items = await db.select().from(inventoryItems).where(eq(inventoryItems.campaignId, parsed.data.campaignId));
     res.json(items);
   } catch (err) {
@@ -27,7 +33,6 @@ router.get("/campaigns/:campaignId/inventory", async (req, res) => {
   }
 });
 
-// Add inventory item
 router.post("/campaigns/:campaignId/inventory", async (req, res) => {
   const paramsParsed = AddInventoryItemParams.safeParse({ campaignId: req.params.campaignId });
   if (!paramsParsed.success) return void res.status(400).json({ error: paramsParsed.error });
@@ -36,6 +41,10 @@ router.post("/campaigns/:campaignId/inventory", async (req, res) => {
   if (!bodyParsed.success) return void res.status(400).json({ error: bodyParsed.error });
 
   try {
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
     const [item] = await db.insert(inventoryItems).values({
       campaignId: paramsParsed.data.campaignId,
       ...bodyParsed.data,
@@ -47,7 +56,6 @@ router.post("/campaigns/:campaignId/inventory", async (req, res) => {
   }
 });
 
-// Update inventory item
 router.put("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
   const paramsParsed = UpdateInventoryItemParams.safeParse({
     campaignId: req.params.campaignId,
@@ -59,6 +67,10 @@ router.put("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
   if (!bodyParsed.success) return void res.status(400).json({ error: bodyParsed.error });
 
   try {
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
     const [updated] = await db.update(inventoryItems)
       .set(bodyParsed.data)
       .where(and(eq(inventoryItems.id, paramsParsed.data.itemId), eq(inventoryItems.campaignId, paramsParsed.data.campaignId)))
@@ -71,7 +83,6 @@ router.put("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
   }
 });
 
-// Delete inventory item
 router.delete("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
   const paramsParsed = DeleteInventoryItemParams.safeParse({
     campaignId: req.params.campaignId,
@@ -80,6 +91,10 @@ router.delete("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
   if (!paramsParsed.success) return void res.status(400).json({ error: paramsParsed.error });
 
   try {
+    const [campaign] = await db.select().from(campaigns)
+      .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
     await db.delete(inventoryItems).where(
       and(eq(inventoryItems.id, paramsParsed.data.itemId), eq(inventoryItems.campaignId, paramsParsed.data.campaignId))
     );

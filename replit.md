@@ -1,6 +1,6 @@
-# Solo D&D 5e Companion App
+# Solo D&D 5e Companion App — Solo Spire
 
-A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anthropic Claude. Players can create campaigns, build characters, explore the world through narrative chat, roll dice, track quests, and manage inventory — all in an immersive dark fantasy interface.
+A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anthropic Claude. Players create accounts, manage campaigns, build characters, explore the world through narrative chat, roll dice, track quests, and manage inventory — all in an immersive dark fantasy interface.
 
 ## Architecture
 
@@ -22,29 +22,33 @@ A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anth
 - **Frontend**: React 18, Vite, TailwindCSS v4, shadcn/ui, wouter, TanStack Query
 - **Backend**: Express.js, Node.js, TypeScript
 - **Database**: PostgreSQL via Drizzle ORM
+- **Auth**: Clerk (Replit-managed, provisioned) — `@clerk/react` (frontend) + `@clerk/express` (backend)
 - **AI**: Anthropic Claude (claude-sonnet-4-6) via Replit AI Integrations proxy
 - **Code generation**: Orval (from OpenAPI spec → React Query hooks + Zod schemas)
 
 ## Key Features
 
-1. **Campaign Hub** (`/`) — List, load, and delete campaigns with last-played info
-2. **Character Creation Wizard** (`/campaign/new`) — 5-step wizard: basics → race → class → ability scores (point buy or roll) → confirm
-3. **Game View** (`/campaign/:id`) — Three-panel desktop layout:
+1. **Landing Page** (`/`) — Public marketing page for signed-out users; auto-redirects signed-in users to `/campaigns`
+2. **Auth** — Clerk-powered sign-in/sign-up at `/sign-in` and `/sign-up` with custom dark fantasy theme
+3. **Campaign Hub** (`/campaigns`) — Per-user campaign list with last-played info; protected route
+4. **Character Creation Wizard** (`/campaign/new`) — 5-step wizard: basics → race → class → ability scores → confirm
+5. **Game View** (`/campaign/:id`) — Three-panel desktop layout:
    - **Left**: Character sheet (HP adjuster, stats, spell slots, conditions, XP bar, gold)
    - **Center**: AI DM chat with SSE streaming, dice roll entries, typing indicator
    - **Right**: Quest log + Inventory tabs
-4. **Dice Rolling** — d4/d6/d8/d10/d12/d20/d100 tray, dice results attach to next message
-5. **AI DM** — Claude with full system prompt tracking HP, XP, quests, inventory via structured `<STATE_UPDATE>` parsing
-6. **Auto-save** — Campaign state updated automatically on each AI response
+6. **Dice Rolling** — d4/d6/d8/d10/d12/d20/d100 tray
+7. **AI DM** — Claude with full system prompt tracking HP, XP, quests, inventory via structured `<STATE_UPDATE>` parsing
+8. **Auto-save** — Campaign state updated automatically on each AI response
+9. **Multi-user** — Each user sees only their own campaigns; all routes enforce auth
 
 ## Database Schema
 
-Tables: `campaigns`, `characters`, `chat_messages`, `quests`, `inventory_items`
+Tables: `campaigns` (with `user_id`), `characters`, `chat_messages`, `quests`, `inventory_items`
 
 ## API Routes
 
-All routes prefixed with `/api`:
-- `GET/POST /campaigns` — List / create campaigns
+All routes prefixed with `/api` and protected by `requireAuth` middleware:
+- `GET/POST /campaigns` — List / create campaigns (scoped to authenticated user)
 - `GET/PUT/DELETE /campaigns/:id` — Campaign CRUD
 - `POST /campaigns/:id/save` — Manual save with character updates
 - `GET /campaigns/:campaignId/messages` — Chat history
@@ -57,11 +61,20 @@ All routes prefixed with `/api`:
 - `PUT/DELETE /campaigns/:campaignId/inventory/:itemId` — Item management
 - `POST /roll` — Dice rolling (supports XdY+Z, keep highest/lowest)
 
+## Auth Architecture
+
+- **Backend proxy**: `clerkProxyMiddleware` at `/api/__clerk` forwards Clerk requests
+- **Backend middleware**: `clerkMiddleware` from `@clerk/express` populates `req.auth`
+- **Route protection**: `requireAuth` middleware extracts `userId` and attaches to `req.userId`
+- **Frontend**: `ClerkProvider` with custom dark/amber appearance wrapping all routes
+- **Session cookies**: Browser sends session cookies automatically; no manual token handling needed
+
 ## Design
 
-- **Always dark** — Deep slate blacks, warm amber/gold primary accent
+- **Always dark** — Deep slate blacks, warm amber/gold primary accent (`hsl(35 90% 50%)`)
 - **Fonts**: Crimson Text (serif, narrative text), Inter (UI)
 - **Aesthetic**: Aged grimoire / forbidden tome feel
+- **Clerk theme**: Custom shadcn base with dark fantasy colors + branded logo at `public/logo.svg`
 
 ## Development
 
@@ -75,6 +88,9 @@ pnpm --filter @workspace/dnd-companion run dev
 # Push DB schema changes
 pnpm --filter @workspace/db run push
 
+# Force push (accepts data loss)
+pnpm --filter @workspace/db run push-force
+
 # Regenerate API client from spec
 pnpm --filter @workspace/api-spec run codegen
 
@@ -87,4 +103,10 @@ pnpm run typecheck
 - `DATABASE_URL` — PostgreSQL connection string
 - `AI_INTEGRATIONS_ANTHROPIC_BASE_URL` — Replit AI Integrations proxy URL
 - `AI_INTEGRATIONS_ANTHROPIC_API_KEY` — Replit AI Integrations API key
-- `SESSION_SECRET` — Session secret (reserved)
+- `CLERK_SECRET_KEY` — Clerk secret key (auto-provisioned by Replit)
+- `CLERK_PUBLISHABLE_KEY` — Clerk publishable key (auto-provisioned)
+- `VITE_CLERK_PUBLISHABLE_KEY` — Clerk publishable key for Vite frontend
+
+## Deployment
+
+Live at **https://solo-spire.replit.app** (autoscale). Development and production Clerk user stores are separate — accounts made in dev do not carry over to production.
