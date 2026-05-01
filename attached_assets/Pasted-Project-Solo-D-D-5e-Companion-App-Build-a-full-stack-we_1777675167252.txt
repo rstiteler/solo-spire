@@ -1,0 +1,87 @@
+Project: Solo D&D 5e Companion App
+
+Build a full-stack web application that allows a single player to experience Dungeons & Dragons 5th Edition without needing a Dungeon Master or other players. The AI acts as both the DM and handles NPC/world behavior independently.
+
+---
+
+TECH STACK
+- Frontend: React (Vite)
+- Backend: Node.js / Express
+- Database: PostgreSQL (or SQLite for simplicity) with persistent storage
+- AI: Anthropic Claude API (claude-sonnet-4-20250514)
+- Styling: Tailwind CSS
+- Image Generation: Use the Stability AI API or Replicate API to generate character portrait images from a text description
+
+---
+
+CORE FEATURES
+
+1. Campaign Management
+- A home screen that lists all saved campaigns
+- Each campaign stores: campaign name, character data, full session history/chat log, current scene/location, inventory, quest log
+- Ability to create a new campaign, load an existing one, or delete one
+- Auto-save after every AI response; also include a manual save button
+- Support for at least 10 simultaneous campaigns
+
+2. Character Creation & Management
+- A full D&D 5e character creation flow:
+  - Choose Race (with racial trait bonuses applied automatically)
+  - Choose Class (all 12 PHB classes)
+  - Ability score assignment (either point buy or manual roll using 4d6 drop lowest)
+  - Background selection (with skill proficiencies and starting equipment)
+  - Name, alignment, backstory
+- Display a character sheet panel that always shows: HP, AC, stats, proficiency bonus, skills, spell slots (if applicable), inventory, and equipped items
+- Level Up System: When the AI determines XP thresholds are met (or player requests it), a Level Up modal appears. It walks through: HP roll, new class features, ASI/feat choice, new spell slots/spells if applicable. All changes persist.
+
+3. AI Dungeon Master (the heart of the app)
+- Use the Claude API with a persistent system prompt that instructs it to:
+  - Act as a skilled, creative D&D 5e Dungeon Master
+  - Maintain world consistency across the full session history (pass entire chat log in context)
+  - Track XP awarded and notify when level up threshold is reached
+  - Independently decide when enemies act, what NPCs say and do, and how the world reacts
+  - Roll dice autonomously: The DM should call a backend /roll endpoint itself when it needs to make checks (enemy attack rolls, saving throws, perception checks, random encounter tables). It should narrate the result naturally ("The goblin lunges — rolling to hit... a 14. That hits your AC.")
+  - Present the player with meaningful choices but not railroad them
+  - Track and enforce D&D 5e rules (spell slot consumption, condition effects, death saving throws, etc.)
+  - Award XP for encounters, roleplay, and milestones
+  - Maintain a quest log updated by the AI as quests are discovered and completed
+
+4. Dice Rolling System
+- A /roll API endpoint that accepts a dice expression (e.g., 1d20+5, 2d6, 4d6kh3) and returns the result with individual die values shown
+- A visible dice tray in the UI where the player can also manually roll dice (animated dice visuals preferred)
+- The AI DM uses this endpoint for its own rolls, and the results are shown in the chat log with a distinct visual style (e.g., a dice icon badge)
+- Player rolls for attacks/checks are initiated through the UI and fed into the AI's next prompt as context
+
+5. Character Image Generation
+- After character creation, generate a character portrait using Stability AI or Replicate based on: race, class, hair/eye color, build, and any description the player provides
+- Display the portrait on the character sheet panel
+- If image generation API is unavailable, fall back to generating a richly detailed written character description (appearance, mannerisms, bearing) using the Claude API and display it styled as a "character profile card"
+- Allow the player to regenerate the image or description at any time
+
+---
+
+UI/UX REQUIREMENTS
+- Dark fantasy aesthetic: think parchment textures, deep blacks, warm amber/gold accents, readable serif fonts for lore text, clean sans-serif for UI
+- Three-panel layout on desktop:
+  - Left: Character sheet (always visible, scrollable)
+  - Center: Chat/narrative window (main game area)
+  - Right: Quest log + inventory sidebar
+- Mobile: tabbed layout switching between the three panels
+- Dice rolls in the chat log should be visually distinct (different bubble style, dice icon)
+- AI "thinking" indicator while waiting for response
+- Chat log is scrollable and preserves full session history visually
+
+---
+
+ENVIRONMENT VARIABLES NEEDED
+
+ANTHROPIC_API_KEY=
+STABILITY_API_KEY= (or REPLICATE_API_KEY=)
+DATABASE_URL=
+
+---
+
+IMPORTANT IMPLEMENTATION NOTES
+- Always pass the full campaign chat history to the Claude API on each request so the DM maintains world continuity
+- The system prompt for the DM should be injected server-side and never exposed to the client
+- Dice rolls made by the AI should happen server-side before the AI response is returned, with results injected into the prompt context so the AI narrates a real result, not a made-up one
+- Character state (HP, inventory, spell slots, XP) should update after every AI response by parsing structured JSON the AI appends to its response, then stripping it before displaying the narrative to the player

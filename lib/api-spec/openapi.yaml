@@ -3,20 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Solo D&D 5e Companion App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: campaigns
+    description: Campaign management
+  - name: characters
+    description: Character management
+  - name: chat
+    description: AI Dungeon Master chat
+  - name: dice
+    description: Dice rolling
+  - name: quests
+    description: Quest log management
+  - name: inventory
+    description: Inventory management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,417 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /campaigns:
+    get:
+      operationId: listCampaigns
+      tags: [campaigns]
+      summary: List all campaigns
+      responses:
+        "200":
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create a new campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignBody"
+      responses:
+        "201":
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get a campaign by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign with full details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignDetail"
+    put:
+      operationId: updateCampaign
+      tags: [campaigns]
+      summary: Update a campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignBody"
+      responses:
+        "200":
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    delete:
+      operationId: deleteCampaign
+      tags: [campaigns]
+      summary: Delete a campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /campaigns/{id}/save:
+    post:
+      operationId: saveCampaign
+      tags: [campaigns]
+      summary: Manual save of campaign state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveCampaignBody"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{campaignId}/messages:
+    get:
+      operationId: listMessages
+      tags: [chat]
+      summary: List all chat messages for a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+
+  /campaigns/{campaignId}/chat:
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a message to the AI Dungeon Master (streaming SSE)
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "200":
+          description: SSE stream of AI response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /campaigns/{campaignId}/character:
+    get:
+      operationId: getCharacter
+      tags: [characters]
+      summary: Get the character for a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Character sheet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+    put:
+      operationId: updateCharacter
+      tags: [characters]
+      summary: Update character data
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCharacterBody"
+      responses:
+        "200":
+          description: Updated character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+
+  /campaigns/{campaignId}/character/portrait:
+    post:
+      operationId: generatePortrait
+      tags: [characters]
+      summary: Generate character portrait using AI
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneratePortraitBody"
+      responses:
+        "200":
+          description: Portrait result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortraitResult"
+
+  /campaigns/{campaignId}/quests:
+    get:
+      operationId: listQuests
+      tags: [quests]
+      summary: Get quest log for a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quest log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quest"
+    post:
+      operationId: createQuest
+      tags: [quests]
+      summary: Add a quest to the log
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestBody"
+      responses:
+        "201":
+          description: Created quest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quest"
+
+  /campaigns/{campaignId}/quests/{questId}:
+    put:
+      operationId: updateQuest
+      tags: [quests]
+      summary: Update a quest
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: questId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestBody"
+      responses:
+        "200":
+          description: Updated quest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quest"
+
+  /campaigns/{campaignId}/inventory:
+    get:
+      operationId: listInventory
+      tags: [inventory]
+      summary: Get inventory for a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+    post:
+      operationId: addInventoryItem
+      tags: [inventory]
+      summary: Add item to inventory
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInventoryItemBody"
+      responses:
+        "201":
+          description: Added item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+
+  /campaigns/{campaignId}/inventory/{itemId}:
+    put:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update an inventory item
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInventoryItemBody"
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+    delete:
+      operationId: deleteInventoryItem
+      tags: [inventory]
+      summary: Remove item from inventory
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /roll:
+    post:
+      operationId: rollDice
+      tags: [dice]
+      summary: Roll dice with a dice expression
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RollDiceBody"
+      responses:
+        "200":
+          description: Roll result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RollResult"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +453,509 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        currentScene:
+          type: string
+          nullable: true
+        currentLocation:
+          type: string
+          nullable: true
+        xp:
+          type: integer
+        level:
+          type: integer
+        gold:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastPlayedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, name, xp, level, gold, createdAt, updatedAt]
+
+    CampaignDetail:
+      allOf:
+        - $ref: "#/components/schemas/Campaign"
+        - type: object
+          properties:
+            character:
+              $ref: "#/components/schemas/Character"
+              nullable: true
+            quests:
+              type: array
+              items:
+                $ref: "#/components/schemas/Quest"
+            inventory:
+              type: array
+              items:
+                $ref: "#/components/schemas/InventoryItem"
+          required: [quests, inventory]
+
+    CreateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required: [name]
+
+    UpdateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        currentScene:
+          type: string
+          nullable: true
+        currentLocation:
+          type: string
+          nullable: true
+        xp:
+          type: integer
+        level:
+          type: integer
+        gold:
+          type: integer
+
+    SaveCampaignBody:
+      type: object
+      properties:
+        currentScene:
+          type: string
+          nullable: true
+        currentLocation:
+          type: string
+          nullable: true
+        xp:
+          type: integer
+        level:
+          type: integer
+        gold:
+          type: integer
+        characterUpdates:
+          $ref: "#/components/schemas/UpdateCharacterBody"
+          nullable: true
+      required: []
+
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        name:
+          type: string
+        race:
+          type: string
+        class:
+          type: string
+        background:
+          type: string
+        alignment:
+          type: string
+          nullable: true
+        backstory:
+          type: string
+          nullable: true
+        level:
+          type: integer
+        xp:
+          type: integer
+        hp:
+          type: integer
+        maxHp:
+          type: integer
+        tempHp:
+          type: integer
+        ac:
+          type: integer
+        speed:
+          type: integer
+        proficiencyBonus:
+          type: integer
+        strength:
+          type: integer
+        dexterity:
+          type: integer
+        constitution:
+          type: integer
+        intelligence:
+          type: integer
+        wisdom:
+          type: integer
+        charisma:
+          type: integer
+        skillProficiencies:
+          type: array
+          items:
+            type: string
+        savingThrowProficiencies:
+          type: array
+          items:
+            type: string
+        spellSlots:
+          type: object
+          nullable: true
+        spellSlotsUsed:
+          type: object
+          nullable: true
+        knownSpells:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+        portraitUrl:
+          type: string
+          nullable: true
+        portraitDescription:
+          type: string
+          nullable: true
+        deathSaves:
+          type: object
+          nullable: true
+        conditions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - campaignId
+        - name
+        - race
+        - class
+        - background
+        - level
+        - xp
+        - hp
+        - maxHp
+        - tempHp
+        - ac
+        - speed
+        - proficiencyBonus
+        - strength
+        - dexterity
+        - constitution
+        - intelligence
+        - wisdom
+        - charisma
+        - skillProficiencies
+        - savingThrowProficiencies
+        - knownSpells
+        - features
+        - conditions
+        - createdAt
+        - updatedAt
+
+    UpdateCharacterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        race:
+          type: string
+        class:
+          type: string
+        background:
+          type: string
+        alignment:
+          type: string
+          nullable: true
+        backstory:
+          type: string
+          nullable: true
+        level:
+          type: integer
+        xp:
+          type: integer
+        hp:
+          type: integer
+        maxHp:
+          type: integer
+        tempHp:
+          type: integer
+        ac:
+          type: integer
+        speed:
+          type: integer
+        proficiencyBonus:
+          type: integer
+        strength:
+          type: integer
+        dexterity:
+          type: integer
+        constitution:
+          type: integer
+        intelligence:
+          type: integer
+        wisdom:
+          type: integer
+        charisma:
+          type: integer
+        skillProficiencies:
+          type: array
+          items:
+            type: string
+        savingThrowProficiencies:
+          type: array
+          items:
+            type: string
+        spellSlots:
+          type: object
+          nullable: true
+        spellSlotsUsed:
+          type: object
+          nullable: true
+        knownSpells:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+        portraitUrl:
+          type: string
+          nullable: true
+        portraitDescription:
+          type: string
+          nullable: true
+        deathSaves:
+          type: object
+          nullable: true
+        conditions:
+          type: array
+          items:
+            type: string
+
+    GeneratePortraitBody:
+      type: object
+      properties:
+        description:
+          type: string
+        race:
+          type: string
+        class:
+          type: string
+      required: [description, race, class]
+
+    PortraitResult:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [image, description]
+        portraitUrl:
+          type: string
+          nullable: true
+        portraitDescription:
+          type: string
+          nullable: true
+      required: [type]
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        diceRolls:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/RollResult"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, campaignId, role, content, createdAt]
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+        diceRolls:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/RollResult"
+      required: [content]
+
+    Quest:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, failed]
+        isMain:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, campaignId, title, status, isMain, createdAt, updatedAt]
+
+    CreateQuestBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, failed]
+        isMain:
+          type: boolean
+      required: [title, status, isMain]
+
+    UpdateQuestBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, failed]
+        isMain:
+          type: boolean
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        isEquipped:
+          type: boolean
+        itemType:
+          type: string
+          enum: [weapon, armor, consumable, tool, treasure, misc]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, campaignId, name, quantity, isEquipped, itemType, createdAt]
+
+    CreateInventoryItemBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        isEquipped:
+          type: boolean
+        itemType:
+          type: string
+          enum: [weapon, armor, consumable, tool, treasure, misc]
+      required: [name, quantity, isEquipped, itemType]
+
+    UpdateInventoryItemBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        isEquipped:
+          type: boolean
+        itemType:
+          type: string
+          enum: [weapon, armor, consumable, tool, treasure, misc]
+
+    RollDiceBody:
+      type: object
+      properties:
+        expression:
+          type: string
+          description: Dice expression e.g. "1d20+5", "2d6", "4d6kh3"
+        label:
+          type: string
+          nullable: true
+          description: Optional label for this roll
+      required: [expression]
+
+    RollResult:
+      type: object
+      properties:
+        expression:
+          type: string
+        label:
+          type: string
+          nullable: true
+        total:
+          type: integer
+        rolls:
+          type: array
+          items:
+            type: integer
+        modifier:
+          type: integer
+        details:
+          type: string
+      required: [expression, total, rolls, modifier, details]

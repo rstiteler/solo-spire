@@ -1,0 +1,140 @@
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { campaigns, characters, quests, inventoryItems } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import {
+  CreateCampaignBody,
+  UpdateCampaignBody,
+  SaveCampaignBody,
+  UpdateCharacterBody,
+  GetCampaignParams,
+  UpdateCampaignParams,
+  DeleteCampaignParams,
+  SaveCampaignParams,
+} from "@workspace/api-zod";
+
+const router = Router();
+
+// List all campaigns
+router.get("/campaigns", async (req, res) => {
+  try {
+    const all = await db.select().from(campaigns).orderBy(campaigns.updatedAt);
+    res.json(all.reverse());
+  } catch (err) {
+    req.log.error({ err }, "Failed to list campaigns");
+    res.status(500).json({ error: "Failed to list campaigns" });
+  }
+});
+
+// Create a campaign
+router.post("/campaigns", async (req, res) => {
+  const parsed = CreateCampaignBody.safeParse(req.body);
+  if (!parsed.success) return void res.status(400).json({ error: parsed.error });
+
+  try {
+    const [campaign] = await db.insert(campaigns).values({
+      name: parsed.data.name,
+    }).returning();
+    res.status(201).json(campaign);
+  } catch (err) {
+    req.log.error({ err }, "Failed to create campaign");
+    res.status(500).json({ error: "Failed to create campaign" });
+  }
+});
+
+// Get a campaign by ID with full details
+router.get("/campaigns/:id", async (req, res) => {
+  const parsed = GetCampaignParams.safeParse({ id: req.params.id });
+  if (!parsed.success) return void res.status(400).json({ error: parsed.error });
+
+  try {
+    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, parsed.data.id));
+    if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
+
+    const [character] = await db.select().from(characters).where(eq(characters.campaignId, parsed.data.id));
+    const questList = await db.select().from(quests).where(eq(quests.campaignId, parsed.data.id));
+    const inventory = await db.select().from(inventoryItems).where(eq(inventoryItems.campaignId, parsed.data.id));
+
+    res.json({ ...campaign, character: character ?? null, quests: questList, inventory });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get campaign");
+    res.status(500).json({ error: "Failed to get campaign" });
+  }
+});
+
+// Update a campaign
+router.put("/campaigns/:id", async (req, res) => {
+  const paramsParsed = UpdateCampaignParams.safeParse({ id: req.params.id });
+  if (!paramsParsed.success) return void res.status(400).json({ error: paramsParsed.error });
+
+  const bodyParsed = UpdateCampaignBody.safeParse(req.body);
+  if (!bodyParsed.success) return void res.status(400).json({ error: bodyParsed.error });
+
+  try {
+    const [updated] = await db.update(campaigns)
+      .set({ ...bodyParsed.data, updatedAt: new Date() })
+      .where(eq(campaigns.id, paramsParsed.data.id))
+      .returning();
+    if (!updated) return void res.status(404).json({ error: "Campaign not found" });
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update campaign");
+    res.status(500).json({ error: "Failed to update campaign" });
+  }
+});
+
+// Delete a campaign
+router.delete("/campaigns/:id", async (req, res) => {
+  const parsed = DeleteCampaignParams.safeParse({ id: req.params.id });
+  if (!parsed.success) return void res.status(400).json({ error: parsed.error });
+
+  try {
+    await db.delete(campaigns).where(eq(campaigns.id, parsed.data.id));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete campaign");
+    res.status(500).json({ error: "Failed to delete campaign" });
+  }
+});
+
+// Manual save campaign
+router.post("/campaigns/:id/save", async (req, res) => {
+  const paramsParsed = SaveCampaignParams.safeParse({ id: req.params.id });
+  if (!paramsParsed.success) return void res.status(400).json({ error: paramsParsed.error });
+
+  const bodyParsed = SaveCampaignBody.safeParse(req.body);
+  if (!bodyParsed.success) return void res.status(400).json({ error: bodyParsed.error });
+
+  try {
+    const { characterUpdates, ...campaignUpdates } = bodyParsed.data;
+
+    const [updated] = await db.update(campaigns)
+      .set({ ...campaignUpdates, updatedAt: new Date(), lastPlayedAt: new Date() })
+      .where(eq(campaigns.id, paramsParsed.data.id))
+      .returning();
+    if (!updated) return void res.status(404).json({ error: "Campaign not found" });
+
+    if (characterUpdates && Object.keys(characterUpdates).length > 0) {
+      const charBody = UpdateCharacterBody.safeParse(characterUpdates);
+      if (charBody.success) {
+        const { spellSlots, spellSlotsUsed, deathSaves, ...charRest } = charBody.data;
+        await db.update(characters)
+          .set({
+            ...charRest,
+            spellSlots: spellSlots as Record<string, number> | undefined,
+            spellSlotsUsed: spellSlotsUsed as Record<string, number> | undefined,
+            deathSaves: deathSaves as { successes: number; failures: number } | undefined,
+            updatedAt: new Date(),
+          })
+          .where(eq(characters.campaignId, paramsParsed.data.id));
+      }
+    }
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to save campaign");
+    res.status(500).json({ error: "Failed to save campaign" });
+  }
+});
+
+export default router;
