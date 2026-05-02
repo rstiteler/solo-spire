@@ -24,8 +24,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, Save, Send, Dices, Sword, Shield, Heart, Zap, BookOpen, Package,
-  ChevronDown, ChevronUp, User, Star, CheckCircle, XCircle, Minus, Plus, Scroll,
-  Trash2, PlusCircle, Info, Pencil
+  ChevronDown, ChevronUp, User, Star, CheckCircle, XCircle, Minus, Plus,
+  Trash2, PlusCircle, Info, Pencil, Sparkles, X
 } from "lucide-react";
 
 type ItemProps = {
@@ -53,72 +53,84 @@ const DICE_FACES = [4, 6, 8, 10, 12, 20, 100] as const;
 
 const CLASS_LEVEL_FEATURES: Record<string, Record<number, string[]>> = {
   Fighter: {
+    1: ["Fighting Style — choose a combat specialty (Archery, Defense, Dueling, etc.)", "Second Wind — use a bonus action to regain 1d10+level HP once per short rest", "Proficiency with all armor, shields, simple and martial weapons"],
     2: ["Action Surge (1/rest) — take an extra action on your turn"],
     3: ["Martial Archetype — choose Battle Master, Champion, or Eldritch Knight"],
     4: ["Ability Score Improvement — +2 to one score, or +1/+1 to two"],
     5: ["Extra Attack — attack twice when you take the Attack action"],
   },
   Rogue: {
+    1: ["Expertise — double proficiency bonus on two chosen skills", "Sneak Attack (1d6) — deal extra damage when you have advantage or an ally is adjacent", "Thieves' Cant — secret language of rogues and thieves"],
     2: ["Cunning Action — Dash, Disengage, or Hide as a bonus action"],
     3: ["Roguish Archetype — Thief, Assassin, or Arcane Trickster", "Sneak Attack increases to 2d6"],
     4: ["Ability Score Improvement"],
     5: ["Uncanny Dodge — use your reaction to halve an attack's damage", "Sneak Attack increases to 3d6"],
   },
   Wizard: {
+    1: ["Spellcasting (Intelligence) — arcane magic through study and spellbook", "Arcane Recovery (1/day) — recover spell slots worth half your level on a short rest", "Spellbook — start with 6 spells; copy new spells from scrolls and books"],
     2: ["Arcane Tradition subclass — choose your specialization (Evocation, Divination, etc.)", "New spell slots: 3×L1"],
     3: ["New spell slots: 4×L1, 2×L2 — add 2 new spells to your spellbook"],
     4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2"],
     5: ["New spell slots: 4×L1, 3×L2, 2×L3 — add 2 new spells to your spellbook"],
   },
   Cleric: {
+    1: ["Spellcasting (Wisdom) — divine magic from your deity", "Divine Domain — subclass that grants domain spells and special Channel Divinity options", "Proficiency with medium armor, shields, and simple weapons"],
     2: ["Channel Divinity (1/rest) — Turn Undead or your Domain ability", "New spell slots: 3×L1"],
     3: ["New spell slots: 4×L1, 2×L2"],
     4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2"],
     5: ["Destroy Undead (CR ½)", "New spell slots: 4×L1, 3×L2, 2×L3"],
   },
   Druid: {
+    1: ["Spellcasting (Wisdom) — nature magic drawn from the world around you", "Druidic — secret language spoken only among druids", "Proficiency with light/medium armor (non-metal) and simple weapons"],
     2: ["Wild Shape (2/rest) — transform into a beast up to CR ¼", "Druid Circle subclass"],
     3: ["New spell slots: 4×L1, 2×L2"],
     4: ["Wild Shape improves — CR ½, swim speed allowed", "Ability Score Improvement"],
     5: ["New spell slots: 4×L1, 3×L2, 2×L3"],
   },
   Bard: {
+    1: ["Spellcasting (Charisma) — magic through music, words, and performance", "Bardic Inspiration (d6) — grant an ally a bonus die to add to a roll (uses = CHA mod)", "Proficiency with three musical instruments and three skills of your choice"],
     2: ["Jack of All Trades — add half proficiency to any check you aren't proficient in", "Song of Rest — allies heal extra d6 on short rest", "New spell slots: 3×L1 — learn 1 new spell"],
     3: ["Bard College subclass", "Expertise in 2 more skills", "New spell slots: 4×L1, 2×L2 — learn 1 new spell"],
     4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2 — learn 1 new spell"],
     5: ["Font of Inspiration — recover Bardic Inspiration on short rest", "New spell slots: 4×L1, 3×L2, 2×L3 — learn 1 new spell"],
   },
   Ranger: {
+    1: ["Favored Enemy — advantage on checks to track or recall lore about a chosen creature type", "Natural Explorer — double proficiency in INT/WIS checks in your favored terrain"],
     2: ["Spellcasting (Wisdom) — 2 L1 spell slots, choose 2 spells from Ranger list", "Fighting Style"],
     3: ["Ranger Archetype subclass (Hunter, Beast Master, etc.)", "Primeval Awareness"],
     4: ["Ability Score Improvement"],
     5: ["Extra Attack — attack twice when you take the Attack action", "New spell slots: 4×L1, 2×L2"],
   },
   Paladin: {
+    1: ["Divine Sense — detect celestials, fiends, undead, and consecrated/desecrated objects within 60 ft", "Lay on Hands — pool of HP equal to 5×level to heal or cure disease/poison"],
     2: ["Spellcasting (Charisma) — 2 L1 spell slots, choose 2 spells from Paladin list", "Divine Smite — spend a spell slot for extra radiant damage on a hit", "Fighting Style"],
     3: ["Sacred Oath subclass", "Channel Divinity options"],
     4: ["Ability Score Improvement"],
     5: ["Extra Attack — attack twice when you take the Attack action", "New spell slots: 4×L1, 2×L2"],
   },
   Barbarian: {
+    1: ["Rage (2/day) — enter a fury: +2 damage, resistance to physical damage, advantage on STR checks/saves", "Unarmored Defense — AC = 10 + DEX mod + CON mod when not wearing armor"],
     2: ["Reckless Attack — advantage on attacks (but enemies also have advantage vs you)", "Danger Sense — advantage on DEX saves vs traps and spells you can see"],
     3: ["Primal Path subclass — choose your Barbarian archetype"],
     4: ["Ability Score Improvement"],
     5: ["Extra Attack — attack twice when you take the Attack action", "Fast Movement — +10 ft speed (not in heavy armor)"],
   },
   Monk: {
+    1: ["Unarmored Defense — AC = 10 + DEX mod + WIS mod when not wearing armor", "Martial Arts — use DEX for unarmed/monk weapon attacks; unarmed strikes deal 1d4"],
     2: ["Ki Points (2/rest) — Flurry of Blows, Patient Defense, Step of the Wind", "Unarmored Movement — +10 ft speed"],
     3: ["Monastic Tradition subclass", "Deflect Missiles — reduce ranged weapon damage with reaction"],
     4: ["Ability Score Improvement", "Slow Fall — reduce falling damage with reaction"],
     5: ["Extra Attack — attack twice when you take the Attack action", "Stunning Strike — spend 1 Ki point to stun a creature on a hit"],
   },
   Warlock: {
+    1: ["Otherworldly Patron — power granted by a patron entity (Fiend, Archfey, Great Old One, etc.)", "Pact Magic (1 slot/rest) — recover spell slot on short rest; learn 2 spells + Eldritch Blast cantrip"],
     2: ["Eldritch Invocations — choose 2 (Agonizing Blast, Devil's Sight, etc.)", "2 Pact Magic L1 slots (recover on short rest) — learn 1 new spell"],
     3: ["Pact Boon — Pact of the Chain, Blade, or Tome", "Pact Magic upgrades to L2 slots — learn 1 new spell"],
     4: ["Ability Score Improvement — learn 1 new spell"],
     5: ["Pact Magic upgrades to L3 slots — learn 1 new spell"],
   },
   Sorcerer: {
+    1: ["Sorcerous Origin — innate magic source (Draconic Bloodline, Wild Magic, etc.)", "Spellcasting (Charisma) — 4 cantrips, 2 spells known, 2×L1 spell slots"],
     2: ["Font of Magic — 2 Sorcery Points (Flexible Casting, Quicken, Twin, Subtle, Distant)", "Learn 1 new spell"],
     3: ["Metamagic — choose 2 options", "3 Sorcery Points — learn 1 new spell"],
     4: ["Ability Score Improvement", "4 Sorcery Points — learn 1 new spell"],
@@ -152,8 +164,10 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies">("identity");
+  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities">("identity");
   const [saving, setSaving] = useState(false);
+  const [knownSpellsList, setKnownSpellsList] = useState<string[]>(() => (char?.knownSpells as string[] | null) ?? []);
+  const [spellSearch, setSpellSearch] = useState("");
 
   const [form, setForm] = useState(() => {
     const features = (char?.features as string[] | null) ?? [];
@@ -231,6 +245,7 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           skillProficiencies: form.skillProficiencies,
           savingThrowProficiencies: form.savingThrowProficiencies,
           features: form.subclass ? [form.subclass] : [],
+          knownSpells: knownSpellsList,
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
@@ -265,10 +280,10 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           <DialogTitle className="font-serif text-primary">Edit Character Sheet</DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-1 border-b border-border pb-2">
-          {(["identity", "stats", "proficiencies"] as const).map(t => (
+        <div className="flex flex-wrap gap-1 border-b border-border pb-2">
+          {(["identity", "stats", "proficiencies", "spells", "abilities"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded text-xs font-medium capitalize transition-colors ${tab === t ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
+              className={`px-2.5 py-1.5 rounded text-xs font-medium capitalize transition-colors ${tab === t ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
               {t}
             </button>
           ))}
@@ -386,6 +401,102 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
             </div>
           </div>
         )}
+
+        {tab === "spells" && (() => {
+          const pool = CLASS_SPELL_POOL[form.charClass] ?? {};
+          const knownSet = new Set(knownSpellsList);
+          // Build the full spell pool flattened
+          const allPoolSpells: string[] = [
+            ...(pool.cantrips ?? []),
+            ...(pool["1"] ?? []),
+            ...(pool["2"] ?? []),
+            ...(pool["3"] ?? []),
+          ];
+          const addable = allPoolSpells.filter(s => !knownSet.has(s) && (spellSearch === "" || s.toLowerCase().includes(spellSearch.toLowerCase())));
+          const hasPool = allPoolSpells.length > 0;
+          return (
+            <div className="space-y-4">
+              {/* Known spells */}
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Known Spells & Cantrips</div>
+                {knownSpellsList.length === 0 ? (
+                  <p className="text-xs text-muted-foreground/60 italic">No spells learned yet.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {knownSpellsList.map(s => (
+                      <span key={s} className="flex items-center gap-1 px-2 py-0.5 rounded border border-primary/30 bg-primary/5 text-xs text-primary">
+                        {s}
+                        <button onClick={() => setKnownSpellsList(prev => prev.filter(x => x !== s))}
+                          className="text-primary/50 hover:text-primary ml-0.5">
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add from class pool */}
+              {hasPool && (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Add from {form.charClass} Spell List</div>
+                  <Input
+                    value={spellSearch}
+                    onChange={e => setSpellSearch(e.target.value)}
+                    placeholder="Search spells…"
+                    className="h-7 text-xs bg-card border-border mb-2"
+                  />
+                  {addable.length === 0 ? (
+                    <p className="text-xs text-muted-foreground/60 italic">{spellSearch ? "No matches." : "All available spells already known."}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                      {addable.map(s => (
+                        <button key={s} onClick={() => setKnownSpellsList(prev => [...prev, s])}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded border border-border text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-all">
+                          <Plus className="w-2.5 h-2.5" /> {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!hasPool && (
+                <p className="text-xs text-muted-foreground/60 italic">{form.charClass}s do not have a spell list.</p>
+              )}
+            </div>
+          );
+        })()}
+
+        {tab === "abilities" && (() => {
+          const currentLevel = char?.level ?? 1;
+          const classFeatures = CLASS_LEVEL_FEATURES[form.charClass] ?? {};
+          const levels = Array.from({ length: currentLevel }, (_, i) => i + 1).filter(l => classFeatures[l]?.length);
+          return (
+            <div className="space-y-4">
+              {levels.length === 0 ? (
+                <p className="text-xs text-muted-foreground/60 italic">No class features recorded for {form.charClass}.</p>
+              ) : (
+                levels.map(lvl => (
+                  <div key={lvl}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="text-xs text-muted-foreground uppercase tracking-widest">Level {lvl}</div>
+                      <div className="flex-1 h-px bg-border/60" />
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(classFeatures[lvl] ?? []).map((f, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <Sparkles className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-foreground/85 leading-snug">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              )}
+            </div>
+          );
+        })()}
 
         <DialogFooter className="pt-2 border-t border-border">
           <Button variant="outline" onClick={onClose} className="border-border text-muted-foreground hover:text-foreground">Cancel</Button>
@@ -1090,9 +1201,7 @@ function AddItemDialog({ campaignId, open, onClose }: { campaignId: number; open
 // ─── Sidebar Panel ─────────────────────────────────────────────────────────
 
 function SidebarPanel({ campaignId }: { campaignId: number }) {
-  const [tab, setTab] = useState<"quests" | "inventory">("quests");
   const [showAddItem, setShowAddItem] = useState(false);
-  const { data: quests } = useListQuests(campaignId, { query: { queryKey: getListQuestsQueryKey(campaignId) } });
   const { data: items } = useListInventory(campaignId, { query: { queryKey: getListInventoryQueryKey(campaignId) } });
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const updateItem = useUpdateInventoryItem();
@@ -1111,9 +1220,6 @@ function SidebarPanel({ campaignId }: { campaignId: number }) {
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
   }
 
-  const activeQuests = (quests ?? []).filter(q => q.status === "active");
-  const doneQuests = (quests ?? []).filter(q => q.status !== "active");
-
   const ITEM_ICONS: Record<string, string> = { weapon: "⚔", armor: "🛡", consumable: "⊕", tool: "⚙", treasure: "◆", misc: "◇" };
 
   // Calculate AC breakdown for tooltip
@@ -1131,61 +1237,24 @@ function SidebarPanel({ campaignId }: { campaignId: number }) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex border-b border-border">
-        {(["quests", "inventory"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} data-testid={`tab-${t}`}
-            className={`flex-1 py-2.5 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${tab === t ? "text-primary border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"}`}>
-            {t === "quests" ? <Scroll className="w-3 h-3" /> : <Package className="w-3 h-3" />}
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
+      <div className="border-b border-border px-3 py-2.5 flex items-center gap-1.5">
+        <Package className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Inventory</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {tab === "quests" && (
-          <>
-            {activeQuests.length === 0 && doneQuests.length === 0 && (
-              <p className="text-xs text-muted-foreground/60 italic font-serif text-center py-4">No quests yet. Venture forth to find purpose.</p>
-            )}
-            {activeQuests.map(q => (
-              <div key={q.id} data-testid={`quest-${q.id}`} className={`rounded border p-2.5 ${q.isMain ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}>
-                <div className="flex items-start gap-1.5">
-                  {q.isMain && <Star className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />}
-                  <div>
-                    <div className="text-xs font-semibold text-foreground">{q.title}</div>
-                    {q.description && <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{q.description}</div>}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {doneQuests.length > 0 && (
-              <details>
-                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Completed / Failed ({doneQuests.length})</summary>
-                <div className="mt-2 space-y-1">
-                  {doneQuests.map(q => (
-                    <div key={q.id} className={`rounded border p-2 opacity-50 ${q.status === "failed" ? "border-destructive/30" : "border-border"}`}>
-                      <div className="text-xs text-muted-foreground line-through">{q.title}</div>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </>
-        )}
+        <>
+          {/* AC breakdown hint */}
+          {equippedArmor.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 rounded p-2 text-xs text-muted-foreground">
+              <Info className="w-3 h-3 text-primary flex-shrink-0" />
+              <span>AC {char?.ac}: {acBreakdown}</span>
+            </div>
+          )}
 
-        {tab === "inventory" && (
-          <>
-            {/* AC breakdown hint */}
-            {equippedArmor.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 rounded p-2 text-xs text-muted-foreground">
-                <Info className="w-3 h-3 text-primary flex-shrink-0" />
-                <span>AC {char?.ac}: {acBreakdown}</span>
-              </div>
-            )}
-
-            {(items ?? []).length === 0 && (
-              <p className="text-xs text-muted-foreground/60 italic font-serif text-center py-4">Your pack is empty.</p>
-            )}
+          {(items ?? []).length === 0 && (
+            <p className="text-xs text-muted-foreground/60 italic font-serif text-center py-4">Your pack is empty.</p>
+          )}
             {(items ?? []).map(item => {
               const props = item.itemProperties as ItemProps | null;
               const canEquip = item.itemType === "weapon" || item.itemType === "armor";
@@ -1228,17 +1297,13 @@ function SidebarPanel({ campaignId }: { campaignId: number }) {
               );
             })}
           </>
-        )}
       </div>
 
-      {/* Add item button */}
-      {tab === "inventory" && (
-        <div className="border-t border-border p-2">
-          <button onClick={() => setShowAddItem(true)} className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-primary transition-colors rounded hover:bg-primary/5">
-            <PlusCircle className="w-3.5 h-3.5" /> Add Item
-          </button>
-        </div>
-      )}
+      <div className="border-t border-border p-2">
+        <button onClick={() => setShowAddItem(true)} className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-primary transition-colors rounded hover:bg-primary/5">
+          <PlusCircle className="w-3.5 h-3.5" /> Add Item
+        </button>
+      </div>
 
       <AddItemDialog campaignId={campaignId} open={showAddItem} onClose={() => setShowAddItem(false)} />
     </div>
