@@ -672,6 +672,66 @@ function ChatMessage({ msg }: { msg: Message }) {
   );
 }
 
+// ─── Spell Progression Data ─────────────────────────────────────────────────
+
+type SpellGain = { spells?: number; cantrips?: number; maxSlotLevel: number; isPrepared?: boolean };
+const SPELL_GAINS: Record<string, Record<number, SpellGain>> = {
+  Wizard:   { 2:{spells:2,maxSlotLevel:1}, 3:{spells:2,maxSlotLevel:2}, 4:{spells:2,maxSlotLevel:2}, 5:{spells:2,maxSlotLevel:3} },
+  Bard:     { 2:{spells:1,maxSlotLevel:1}, 3:{spells:1,maxSlotLevel:2}, 4:{spells:1,cantrips:1,maxSlotLevel:2}, 5:{spells:1,maxSlotLevel:3} },
+  Sorcerer: { 2:{spells:1,maxSlotLevel:1}, 3:{spells:1,maxSlotLevel:2}, 4:{spells:1,cantrips:1,maxSlotLevel:2}, 5:{spells:1,maxSlotLevel:3} },
+  Warlock:  { 2:{spells:1,maxSlotLevel:1}, 3:{spells:1,maxSlotLevel:2}, 4:{spells:1,maxSlotLevel:2}, 5:{spells:1,maxSlotLevel:3} },
+  Ranger:   { 2:{spells:2,maxSlotLevel:1}, 3:{spells:1,maxSlotLevel:1}, 4:{spells:1,maxSlotLevel:1}, 5:{spells:1,maxSlotLevel:2} },
+  Paladin:  { 2:{spells:2,maxSlotLevel:1}, 3:{spells:1,maxSlotLevel:1}, 4:{spells:1,maxSlotLevel:1}, 5:{spells:1,maxSlotLevel:2} },
+  Cleric:   { 3:{maxSlotLevel:2,isPrepared:true}, 5:{maxSlotLevel:3,isPrepared:true} },
+  Druid:    { 3:{maxSlotLevel:2,isPrepared:true}, 5:{maxSlotLevel:3,isPrepared:true} },
+};
+
+type SpellPool = { cantrips?: string[]; "1"?: string[]; "2"?: string[]; "3"?: string[] };
+const CLASS_SPELL_POOL: Record<string, SpellPool> = {
+  Wizard: {
+    cantrips: ["Acid Splash","Blade Ward","Chill Touch","Dancing Lights","Fire Bolt","Friends","Light","Mage Hand","Mending","Message","Minor Illusion","Poison Spray","Prestidigitation","Ray of Frost","Shocking Grasp","True Strike"],
+    "1": ["Alarm","Burning Hands","Charm Person","Chromatic Orb","Color Spray","Comprehend Languages","Detect Magic","Disguise Self","Expeditious Retreat","False Life","Feather Fall","Fog Cloud","Grease","Identify","Jump","Longstrider","Mage Armor","Magic Missile","Protection from Evil and Good","Ray of Sickness","Shield","Silent Image","Sleep","Tasha's Hideous Laughter","Thunderwave","Unseen Servant","Witch Bolt"],
+    "2": ["Alter Self","Blindness/Deafness","Blur","Cloud of Daggers","Crown of Madness","Darkness","Darkvision","Detect Thoughts","Enhance Ability","Enlarge/Reduce","Flaming Sphere","Hold Person","Invisibility","Knock","Levitate","Magic Weapon","Melf's Acid Arrow","Mirror Image","Misty Step","Phantasmal Force","Ray of Enfeeblement","Scorching Ray","See Invisibility","Shatter","Spider Climb","Suggestion","Web"],
+    "3": ["Animate Dead","Bestow Curse","Blink","Clairvoyance","Counterspell","Dispel Magic","Fear","Fireball","Fly","Gaseous Form","Haste","Hypnotic Pattern","Lightning Bolt","Major Image","Nondetection","Protection from Energy","Remove Curse","Sending","Slow","Stinking Cloud","Tongues","Vampiric Touch"],
+  },
+  Bard: {
+    cantrips: ["Blade Ward","Dancing Lights","Friends","Light","Mage Hand","Mending","Message","Minor Illusion","Prestidigitation","True Strike","Thunderclap","Vicious Mockery"],
+    "1": ["Animal Friendship","Bane","Charm Person","Color Spray","Command","Comprehend Languages","Cure Wounds","Detect Magic","Disguise Self","Dissonant Whispers","Faerie Fire","Feather Fall","Healing Word","Heroism","Identify","Longstrider","Silent Image","Sleep","Speak with Animals","Tasha's Hideous Laughter","Thunderwave","Unseen Servant"],
+    "2": ["Animal Messenger","Blindness/Deafness","Calm Emotions","Cloud of Daggers","Crown of Madness","Detect Thoughts","Enhance Ability","Enthrall","Heat Metal","Hold Person","Invisibility","Knock","Locate Object","Mirror Image","Misty Step","Phantasmal Force","See Invisibility","Shatter","Silence","Suggestion","Zone of Truth"],
+    "3": ["Bestow Curse","Clairvoyance","Dispel Magic","Fear","Hypnotic Pattern","Major Image","Nondetection","Plant Growth","Remove Curse","Sending","Speak with Dead","Stinking Cloud","Tongues"],
+  },
+  Sorcerer: {
+    cantrips: ["Acid Splash","Blade Ward","Chill Touch","Dancing Lights","Fire Bolt","Friends","Light","Mage Hand","Mending","Message","Minor Illusion","Poison Spray","Prestidigitation","Ray of Frost","Shocking Grasp","True Strike","Thunderclap","Booming Blade"],
+    "1": ["Burning Hands","Charm Person","Chromatic Orb","Color Spray","Comprehend Languages","Detect Magic","Disguise Self","Expeditious Retreat","False Life","Feather Fall","Fog Cloud","Jump","Mage Armor","Magic Missile","Protection from Evil and Good","Ray of Sickness","Shield","Silent Image","Sleep","Thunderwave","Witch Bolt","Absorb Elements"],
+    "2": ["Blindness/Deafness","Blur","Cloud of Daggers","Crown of Madness","Darkness","Darkvision","Detect Thoughts","Enhance Ability","Enlarge/Reduce","Gust of Wind","Hold Person","Invisibility","Knock","Levitate","Mirror Image","Misty Step","Phantasmal Force","Scorching Ray","See Invisibility","Shatter","Spider Climb","Suggestion","Web"],
+    "3": ["Blink","Clairvoyance","Counterspell","Daylight","Dispel Magic","Fear","Fireball","Fly","Gaseous Form","Haste","Hypnotic Pattern","Lightning Bolt","Major Image","Protection from Energy","Slow","Stinking Cloud","Tongues","Water Breathing"],
+  },
+  Warlock: {
+    cantrips: ["Blade Ward","Chill Touch","Eldritch Blast","Friends","Mage Hand","Minor Illusion","Poison Spray","Prestidigitation","True Strike","Booming Blade","Green-Flame Blade"],
+    "1": ["Armor of Agathys","Arms of Hadar","Charm Person","Comprehend Languages","Expeditious Retreat","Hellish Rebuke","Hex","Protection from Evil and Good","Unseen Servant","Witch Bolt","Cause Fear"],
+    "2": ["Cloud of Daggers","Crown of Madness","Darkness","Enthrall","Hold Person","Invisibility","Mirror Image","Misty Step","Ray of Enfeeblement","Shatter","Spider Climb","Suggestion"],
+    "3": ["Counterspell","Dispel Magic","Fear","Fly","Gaseous Form","Hunger of Hadar","Hypnotic Pattern","Magic Circle","Major Image","Remove Curse","Tongues","Vampiric Touch"],
+  },
+  Ranger: {
+    "1": ["Alarm","Animal Friendship","Cure Wounds","Detect Magic","Detect Poison and Disease","Ensnaring Strike","Fog Cloud","Goodberry","Hail of Thorns","Hunter's Mark","Jump","Longstrider","Speak with Animals"],
+    "2": ["Animal Messenger","Barkskin","Cordon of Arrows","Darkvision","Find Traps","Lesser Restoration","Locate Animals or Plants","Locate Object","Pass Without Trace","Protection from Poison","Silence","Spike Growth"],
+  },
+  Paladin: {
+    "1": ["Bless","Command","Compelled Duel","Cure Wounds","Detect Evil and Good","Detect Magic","Detect Poison and Disease","Divine Favor","Heroism","Protection from Evil and Good","Purify Food and Drink","Searing Smite","Shield of Faith","Thunderous Smite","Wrathful Smite"],
+    "2": ["Aid","Branding Smite","Find Steed","Lesser Restoration","Locate Object","Magic Weapon","Protection from Poison","Zone of Truth"],
+  },
+  Cleric: {
+    "1": ["Bane","Bless","Command","Create or Destroy Water","Cure Wounds","Detect Evil and Good","Detect Magic","Detect Poison and Disease","Guiding Bolt","Healing Word","Inflict Wounds","Protection from Evil and Good","Purify Food and Drink","Sanctuary","Shield of Faith","Thunderwave","Faerie Fire"],
+    "2": ["Aid","Augury","Blindness/Deafness","Calm Emotions","Enhance Ability","Find Traps","Gentle Repose","Hold Person","Lesser Restoration","Locate Object","Prayer of Healing","Protection from Poison","Silence","Spiritual Weapon","Zone of Truth"],
+    "3": ["Animate Dead","Beacon of Hope","Bestow Curse","Clairvoyance","Create Food and Water","Daylight","Dispel Magic","Glyph of Warding","Mass Healing Word","Meld into Stone","Protection from Energy","Remove Curse","Sending","Speak with Dead","Spirit Guardians","Tongues","Water Walk"],
+  },
+  Druid: {
+    "1": ["Animal Friendship","Charm Person","Create or Destroy Water","Cure Wounds","Detect Magic","Detect Poison and Disease","Entangle","Faerie Fire","Fog Cloud","Goodberry","Healing Word","Jump","Longstrider","Purify Food and Drink","Speak with Animals","Thunderwave"],
+    "2": ["Animal Messenger","Barkskin","Darkvision","Enhance Ability","Find Traps","Flame Blade","Flaming Sphere","Gust of Wind","Heat Metal","Hold Person","Lesser Restoration","Locate Animals or Plants","Locate Object","Moonbeam","Pass Without Trace","Protection from Poison","Spike Growth"],
+    "3": ["Call Lightning","Conjure Animals","Daylight","Dispel Magic","Meld into Stone","Plant Growth","Protection from Energy","Sleet Storm","Speak with Plants","Water Breathing","Water Walk","Wind Wall"],
+  },
+};
+
 // ─── Level-Up Modal ────────────────────────────────────────────────────────
 
 function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
@@ -682,12 +742,46 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
   const queryClient = useQueryClient();
   const [hpGained, setHpGained] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
+  const [newSpells, setNewSpells] = useState<string[]>([]);
+  const [newCantrips, setNewCantrips] = useState<string[]>([]);
 
   if (!char) return null;
 
   const conMod = abilityMod(char.constitution ?? 10);
   const avgHp = Math.max(1, Math.floor(hitDie / 2) + 1 + conMod);
   const features = CLASS_LEVEL_FEATURES[char.class]?.[newLevel] ?? [];
+  const spellGain: SpellGain | undefined = SPELL_GAINS[char.class]?.[newLevel];
+  const spellPool: SpellPool = CLASS_SPELL_POOL[char.class] ?? {};
+  const alreadyKnown = new Set((char.knownSpells as string[] | null) ?? []);
+
+  // Build available spell list up to the max slot level for this level-up
+  const availableSpells: string[] = [];
+  for (let lvl = 1; lvl <= (spellGain?.maxSlotLevel ?? 0); lvl++) {
+    const key = String(lvl) as "1" | "2" | "3";
+    (spellPool[key] ?? []).forEach(s => { if (!alreadyKnown.has(s)) availableSpells.push(s); });
+  }
+  const availableCantrips = (spellPool.cantrips ?? []).filter(c => !alreadyKnown.has(c));
+
+  const spellsNeeded = spellGain?.spells ?? 0;
+  const cantripsNeeded = spellGain?.cantrips ?? 0;
+  const spellsDone = newSpells.length === spellsNeeded;
+  const cantripsDone = newCantrips.length === cantripsNeeded;
+  const spellsReady = !spellGain || spellGain.isPrepared || (spellsDone && cantripsDone);
+  const canApply = hpGained !== null && spellsReady;
+
+  function toggleSpell(spell: string) {
+    setNewSpells(prev =>
+      prev.includes(spell) ? prev.filter(s => s !== spell)
+        : prev.length < spellsNeeded ? [...prev, spell] : prev
+    );
+  }
+
+  function toggleCantrip(cantrip: string) {
+    setNewCantrips(prev =>
+      prev.includes(cantrip) ? prev.filter(s => s !== cantrip)
+        : prev.length < cantripsNeeded ? [...prev, cantrip] : prev
+    );
+  }
 
   function rollHp() {
     setRolling(true);
@@ -703,14 +797,23 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
     if (hpGained === null) return;
     const newMaxHp = (char!.maxHp ?? 10) + hpGained;
     const newHp = Math.min(newMaxHp, (char!.hp ?? 10) + hpGained);
-    await updateChar.mutateAsync({ campaignId, data: { maxHp: newMaxHp, hp: newHp } });
+    const currentSpells = (char!.knownSpells as string[] | null) ?? [];
+    const allNewSpells = [...newSpells, ...newCantrips];
+    await updateChar.mutateAsync({
+      campaignId,
+      data: {
+        maxHp: newMaxHp,
+        hp: newHp,
+        ...(allNewSpells.length > 0 ? { knownSpells: [...currentSpells, ...allNewSpells] } : {}),
+      },
+    });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
     onClose();
   }
 
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent className="bg-card border-border text-foreground max-w-md">
+      <DialogContent className="bg-card border-border text-foreground max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-primary text-xl flex items-center gap-2">
             <Star className="w-5 h-5 text-yellow-500" />
@@ -733,6 +836,77 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Spell learning */}
+          {spellGain && spellGain.isPrepared && (
+            <div className="bg-background/50 border border-primary/20 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1.5">Spellcasting</div>
+              <p className="text-sm text-foreground/80 leading-snug">
+                As a {char.class} you now have access to all Level {spellGain.maxSlotLevel} spells from your class list.
+                You prepare <span className="text-primary font-medium">{Math.max(1, abilityMod(char.class === "Cleric" ? (char.wisdom ?? 10) : (char.intelligence ?? 10)) + newLevel)}</span> spells per day chosen from your full list — no selections needed here.
+              </p>
+            </div>
+          )}
+
+          {spellGain && !spellGain.isPrepared && (cantripsNeeded > 0 || spellsNeeded > 0) && (
+            <div className="bg-background/50 border border-border/60 rounded-lg p-3 space-y-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-widest">Learn New Spells</div>
+
+              {cantripsNeeded > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-foreground">Cantrips</span>
+                    <span className={`text-xs font-medium ${newCantrips.length === cantripsNeeded ? "text-primary" : "text-amber-500"}`}>
+                      {newCantrips.length} / {cantripsNeeded} chosen
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableCantrips.map(c => {
+                      const sel = newCantrips.includes(c);
+                      const maxed = newCantrips.length >= cantripsNeeded;
+                      return (
+                        <button key={c} onClick={() => toggleCantrip(c)}
+                          disabled={!sel && maxed}
+                          className={`px-2 py-1 rounded border text-xs transition-all ${sel ? "border-primary bg-primary/15 text-primary" : maxed ? "border-border/30 text-muted-foreground/30 cursor-not-allowed" : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {spellsNeeded > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-foreground">
+                      Spells <span className="text-xs text-muted-foreground">(up to level {spellGain.maxSlotLevel})</span>
+                    </span>
+                    <span className={`text-xs font-medium ${newSpells.length === spellsNeeded ? "text-primary" : "text-amber-500"}`}>
+                      {newSpells.length} / {spellsNeeded} chosen
+                    </span>
+                  </div>
+                  {availableSpells.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">All available spells already known.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableSpells.map(s => {
+                        const sel = newSpells.includes(s);
+                        const maxed = newSpells.length >= spellsNeeded;
+                        return (
+                          <button key={s} onClick={() => toggleSpell(s)}
+                            disabled={!sel && maxed}
+                            className={`px-2 py-1 rounded border text-xs transition-all ${sel ? "border-primary bg-primary/15 text-primary" : maxed ? "border-border/30 text-muted-foreground/30 cursor-not-allowed" : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -771,11 +945,18 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
             )}
           </div>
         </div>
-        <DialogFooter>
-          <Button onClick={applyLevelUp} disabled={hpGained === null || updateChar.isPending}
+        <DialogFooter className="flex-col gap-2">
+          <Button onClick={applyLevelUp} disabled={!canApply || updateChar.isPending}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-serif text-base">
             {updateChar.isPending ? "Applying…" : "Apply Level Up"}
           </Button>
+          {spellGain && !spellGain.isPrepared && !spellsReady && (
+            <p className="text-xs text-amber-500 text-center">
+              Choose your {!cantripsDone ? `${cantripsNeeded - newCantrips.length} cantrip${cantripsNeeded - newCantrips.length > 1 ? "s" : ""}` : ""}
+              {!cantripsDone && !spellsDone ? " and " : ""}
+              {!spellsDone ? `${spellsNeeded - newSpells.length} spell${spellsNeeded - newSpells.length > 1 ? "s" : ""}` : ""} to continue.
+            </p>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
