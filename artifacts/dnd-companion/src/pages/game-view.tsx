@@ -51,6 +51,81 @@ const ABILITY_KEYS = ["strength", "dexterity", "constitution", "intelligence", "
 const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
 const DICE_FACES = [4, 6, 8, 10, 12, 20, 100] as const;
 
+const CLASS_LEVEL_FEATURES: Record<string, Record<number, string[]>> = {
+  Fighter: {
+    2: ["Action Surge (1/rest) — take an extra action on your turn"],
+    3: ["Martial Archetype — choose Battle Master, Champion, or Eldritch Knight"],
+    4: ["Ability Score Improvement — +2 to one score, or +1/+1 to two"],
+    5: ["Extra Attack — attack twice when you take the Attack action"],
+  },
+  Rogue: {
+    2: ["Cunning Action — Dash, Disengage, or Hide as a bonus action"],
+    3: ["Roguish Archetype — Thief, Assassin, or Arcane Trickster", "Sneak Attack increases to 2d6"],
+    4: ["Ability Score Improvement"],
+    5: ["Uncanny Dodge — use your reaction to halve an attack's damage", "Sneak Attack increases to 3d6"],
+  },
+  Wizard: {
+    2: ["Arcane Tradition subclass — choose your specialization (Evocation, Divination, etc.)", "New spell slots: 3×L1"],
+    3: ["New spell slots: 4×L1, 2×L2 — add 2 new spells to your spellbook"],
+    4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2"],
+    5: ["New spell slots: 4×L1, 3×L2, 2×L3 — add 2 new spells to your spellbook"],
+  },
+  Cleric: {
+    2: ["Channel Divinity (1/rest) — Turn Undead or your Domain ability", "New spell slots: 3×L1"],
+    3: ["New spell slots: 4×L1, 2×L2"],
+    4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2"],
+    5: ["Destroy Undead (CR ½)", "New spell slots: 4×L1, 3×L2, 2×L3"],
+  },
+  Druid: {
+    2: ["Wild Shape (2/rest) — transform into a beast up to CR ¼", "Druid Circle subclass"],
+    3: ["New spell slots: 4×L1, 2×L2"],
+    4: ["Wild Shape improves — CR ½, swim speed allowed", "Ability Score Improvement"],
+    5: ["New spell slots: 4×L1, 3×L2, 2×L3"],
+  },
+  Bard: {
+    2: ["Jack of All Trades — add half proficiency to any check you aren't proficient in", "Song of Rest — allies heal extra d6 on short rest", "New spell slots: 3×L1 — learn 1 new spell"],
+    3: ["Bard College subclass", "Expertise in 2 more skills", "New spell slots: 4×L1, 2×L2 — learn 1 new spell"],
+    4: ["Ability Score Improvement", "New spell slots: 4×L1, 3×L2 — learn 1 new spell"],
+    5: ["Font of Inspiration — recover Bardic Inspiration on short rest", "New spell slots: 4×L1, 3×L2, 2×L3 — learn 1 new spell"],
+  },
+  Ranger: {
+    2: ["Spellcasting (Wisdom) — 2 L1 spell slots, choose 2 spells from Ranger list", "Fighting Style"],
+    3: ["Ranger Archetype subclass (Hunter, Beast Master, etc.)", "Primeval Awareness"],
+    4: ["Ability Score Improvement"],
+    5: ["Extra Attack — attack twice when you take the Attack action", "New spell slots: 4×L1, 2×L2"],
+  },
+  Paladin: {
+    2: ["Spellcasting (Charisma) — 2 L1 spell slots, choose 2 spells from Paladin list", "Divine Smite — spend a spell slot for extra radiant damage on a hit", "Fighting Style"],
+    3: ["Sacred Oath subclass", "Channel Divinity options"],
+    4: ["Ability Score Improvement"],
+    5: ["Extra Attack — attack twice when you take the Attack action", "New spell slots: 4×L1, 2×L2"],
+  },
+  Barbarian: {
+    2: ["Reckless Attack — advantage on attacks (but enemies also have advantage vs you)", "Danger Sense — advantage on DEX saves vs traps and spells you can see"],
+    3: ["Primal Path subclass — choose your Barbarian archetype"],
+    4: ["Ability Score Improvement"],
+    5: ["Extra Attack — attack twice when you take the Attack action", "Fast Movement — +10 ft speed (not in heavy armor)"],
+  },
+  Monk: {
+    2: ["Ki Points (2/rest) — Flurry of Blows, Patient Defense, Step of the Wind", "Unarmored Movement — +10 ft speed"],
+    3: ["Monastic Tradition subclass", "Deflect Missiles — reduce ranged weapon damage with reaction"],
+    4: ["Ability Score Improvement", "Slow Fall — reduce falling damage with reaction"],
+    5: ["Extra Attack — attack twice when you take the Attack action", "Stunning Strike — spend 1 Ki point to stun a creature on a hit"],
+  },
+  Warlock: {
+    2: ["Eldritch Invocations — choose 2 (Agonizing Blast, Devil's Sight, etc.)", "2 Pact Magic L1 slots (recover on short rest) — learn 1 new spell"],
+    3: ["Pact Boon — Pact of the Chain, Blade, or Tome", "Pact Magic upgrades to L2 slots — learn 1 new spell"],
+    4: ["Ability Score Improvement — learn 1 new spell"],
+    5: ["Pact Magic upgrades to L3 slots — learn 1 new spell"],
+  },
+  Sorcerer: {
+    2: ["Font of Magic — 2 Sorcery Points (Flexible Casting, Quicken, Twin, Subtle, Distant)", "Learn 1 new spell"],
+    3: ["Metamagic — choose 2 options", "3 Sorcery Points — learn 1 new spell"],
+    4: ["Ability Score Improvement", "4 Sorcery Points — learn 1 new spell"],
+    5: ["5 Sorcery Points — learn 1 new spell"],
+  },
+};
+
 // ─── Dice Tray ─────────────────────────────────────────────────────────────
 
 function DiceTray({ onRoll }: { onRoll: (roll: DiceRoll) => void }) {
@@ -311,6 +386,116 @@ function ChatMessage({ msg }: { msg: Message }) {
         <div className="whitespace-pre-wrap">{msg.content}</div>
       </div>
     </div>
+  );
+}
+
+// ─── Level-Up Modal ────────────────────────────────────────────────────────
+
+function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
+  newLevel: number; hitDie: number; campaignId: number; onClose: () => void;
+}) {
+  const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
+  const updateChar = useUpdateCharacter();
+  const queryClient = useQueryClient();
+  const [hpGained, setHpGained] = useState<number | null>(null);
+  const [rolling, setRolling] = useState(false);
+
+  if (!char) return null;
+
+  const conMod = abilityMod(char.constitution ?? 10);
+  const avgHp = Math.max(1, Math.floor(hitDie / 2) + 1 + conMod);
+  const features = CLASS_LEVEL_FEATURES[char.class]?.[newLevel] ?? [];
+
+  function rollHp() {
+    setRolling(true);
+    setHpGained(null);
+    setTimeout(() => {
+      const roll = Math.ceil(Math.random() * hitDie);
+      setHpGained(Math.max(1, roll + conMod));
+      setRolling(false);
+    }, 600);
+  }
+
+  async function applyLevelUp() {
+    if (hpGained === null) return;
+    const newMaxHp = (char!.maxHp ?? 10) + hpGained;
+    const newHp = Math.min(newMaxHp, (char!.hp ?? 10) + hpGained);
+    await updateChar.mutateAsync({ campaignId, data: { maxHp: newMaxHp, hp: newHp } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={v => !v && onClose()}>
+      <DialogContent className="bg-card border-border text-foreground max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-primary text-xl flex items-center gap-2">
+            <Star className="w-5 h-5 text-yellow-500" />
+            Level {newLevel}!
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground font-serif italic">
+            {char.name} has grown in power as a {char.class}. Your proficiency bonus is now +{Math.floor((newLevel - 1) / 4) + 2}.
+          </p>
+
+          {features.length > 0 && (
+            <div className="bg-background/50 border border-border/60 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2.5">New Features</div>
+              <ul className="space-y-2">
+                {features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <Star className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-foreground/90 leading-snug">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="bg-background/50 border border-border/60 rounded-lg p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Hit Points</div>
+            <div className="text-xs text-muted-foreground mb-3">
+              Roll your d{hitDie} or take the fixed average.
+              CON modifier: {conMod >= 0 ? `+${conMod}` : conMod}
+            </div>
+
+            {hpGained !== null ? (
+              <div className="text-center py-2">
+                <div className="font-serif text-4xl font-bold text-primary">+{hpGained}</div>
+                <div className="text-xs text-muted-foreground mt-1">maximum HP gained</div>
+                <button onClick={() => setHpGained(null)}
+                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground mt-2 underline">
+                  Re-choose
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button onClick={rollHp} disabled={rolling} variant="outline"
+                  className="flex-1 border-primary/40 text-primary hover:bg-primary/10">
+                  {rolling ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      Rolling…
+                    </span>
+                  ) : `Roll d${hitDie}`}
+                </Button>
+                <Button onClick={() => setHpGained(avgHp)} variant="outline"
+                  className="flex-1 border-border text-muted-foreground hover:text-foreground">
+                  Average (+{avgHp})
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={applyLevelUp} disabled={hpGained === null || updateChar.isPending}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-serif text-base">
+            {updateChar.isPending ? "Applying…" : "Apply Level Up"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -615,6 +800,7 @@ export default function GameView() {
   const [pendingRolls, setPendingRolls] = useState<DiceRoll[]>([]);
   const [showDice, setShowDice] = useState(false);
   const [mobileTab, setMobileTab] = useState<"character" | "chat" | "sidebar">("chat");
+  const [pendingLevelUp, setPendingLevelUp] = useState<{ newLevel: number; hitDie: number } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -664,7 +850,9 @@ export default function GameView() {
                   queryClient.invalidateQueries({ queryKey: getListQuestsQueryKey(campaignId) }),
                   queryClient.invalidateQueries({ queryKey: getListInventoryQueryKey(campaignId) }),
                 ]);
-                if (data.levelUp) toast({ title: "Level Up!", description: "Your character has grown stronger." });
+                if (data.levelUp && data.newLevel) {
+                  setPendingLevelUp({ newLevel: data.newLevel, hitDie: data.hitDie ?? 8 });
+                }
               }
               if (data.error) toast({ title: "AI Error", description: data.error, variant: "destructive" });
             } catch { /* ignore */ }
@@ -787,6 +975,15 @@ export default function GameView() {
           <SidebarPanel campaignId={campaignId} />
         </div>
       </div>
+
+      {pendingLevelUp && (
+        <LevelUpModal
+          newLevel={pendingLevelUp.newLevel}
+          hitDie={pendingLevelUp.hitDie}
+          campaignId={campaignId}
+          onClose={() => setPendingLevelUp(null)}
+        />
+      )}
     </div>
   );
 }
