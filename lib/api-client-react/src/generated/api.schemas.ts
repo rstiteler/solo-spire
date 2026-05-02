@@ -96,6 +96,35 @@ export const InventoryItemItemType = {
   misc: "misc",
 } as const;
 
+export type ItemPropertiesArmorType =
+  | (typeof ItemPropertiesArmorType)[keyof typeof ItemPropertiesArmorType]
+  | null;
+
+export const ItemPropertiesArmorType = {
+  light: "light",
+  medium: "medium",
+  heavy: "heavy",
+  shield: "shield",
+} as const;
+
+/**
+ * Mechanical properties for weapons and armor
+ */
+export interface ItemProperties {
+  armorType?: ItemPropertiesArmorType;
+  /** Base AC value for armor (before modifiers) */
+  acBase?: number | null;
+  stealthDisadvantage?: boolean | null;
+  strengthRequirement?: number | null;
+  /** Damage dice expression e.g. "1d8" */
+  damage?: string | null;
+  /** e.g. slashing, piercing, bludgeoning */
+  damageType?: string | null;
+  /** Two-handed damage e.g. "1d10" */
+  versatileDamage?: string | null;
+  weaponProperties?: string[] | null;
+}
+
 export interface InventoryItem {
   id: number;
   campaignId: number;
@@ -105,6 +134,7 @@ export interface InventoryItem {
   weight?: number | null;
   isEquipped: boolean;
   itemType: InventoryItemItemType;
+  itemProperties?: ItemProperties | null;
   createdAt: string;
 }
 
@@ -280,6 +310,7 @@ export interface CreateInventoryItemBody {
   weight?: number | null;
   isEquipped: boolean;
   itemType: CreateInventoryItemBodyItemType;
+  itemProperties?: ItemProperties | null;
 }
 
 export type UpdateInventoryItemBodyItemType =
@@ -301,6 +332,7 @@ export interface UpdateInventoryItemBody {
   weight?: number | null;
   isEquipped?: boolean;
   itemType?: UpdateInventoryItemBodyItemType;
+  itemProperties?: ItemProperties | null;
 }
 
 export interface RollDiceBody {

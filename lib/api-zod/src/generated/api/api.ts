@@ -127,6 +127,33 @@ export const GetCampaignResponse = zod
             "treasure",
             "misc",
           ]),
+          itemProperties: zod
+            .object({
+              armorType: zod
+                .enum(["light", "medium", "heavy", "shield"])
+                .nullish(),
+              acBase: zod
+                .number()
+                .nullish()
+                .describe("Base AC value for armor (before modifiers)"),
+              stealthDisadvantage: zod.boolean().nullish(),
+              strengthRequirement: zod.number().nullish(),
+              damage: zod
+                .string()
+                .nullish()
+                .describe('Damage dice expression e.g. \"1d8\"'),
+              damageType: zod
+                .string()
+                .nullish()
+                .describe("e.g. slashing, piercing, bludgeoning"),
+              versatileDamage: zod
+                .string()
+                .nullish()
+                .describe('Two-handed damage e.g. \"1d10\"'),
+              weaponProperties: zod.array(zod.string()).nullish(),
+            })
+            .nullish()
+            .describe("Mechanical properties for weapons and armor"),
           createdAt: zod.coerce.date(),
         }),
       ),
@@ -504,6 +531,31 @@ export const ListInventoryResponseItem = zod.object({
     "treasure",
     "misc",
   ]),
+  itemProperties: zod
+    .object({
+      armorType: zod.enum(["light", "medium", "heavy", "shield"]).nullish(),
+      acBase: zod
+        .number()
+        .nullish()
+        .describe("Base AC value for armor (before modifiers)"),
+      stealthDisadvantage: zod.boolean().nullish(),
+      strengthRequirement: zod.number().nullish(),
+      damage: zod
+        .string()
+        .nullish()
+        .describe('Damage dice expression e.g. \"1d8\"'),
+      damageType: zod
+        .string()
+        .nullish()
+        .describe("e.g. slashing, piercing, bludgeoning"),
+      versatileDamage: zod
+        .string()
+        .nullish()
+        .describe('Two-handed damage e.g. \"1d10\"'),
+      weaponProperties: zod.array(zod.string()).nullish(),
+    })
+    .nullish()
+    .describe("Mechanical properties for weapons and armor"),
   createdAt: zod.coerce.date(),
 });
 export const ListInventoryResponse = zod.array(ListInventoryResponseItem);
@@ -529,6 +581,31 @@ export const AddInventoryItemBody = zod.object({
     "treasure",
     "misc",
   ]),
+  itemProperties: zod
+    .object({
+      armorType: zod.enum(["light", "medium", "heavy", "shield"]).nullish(),
+      acBase: zod
+        .number()
+        .nullish()
+        .describe("Base AC value for armor (before modifiers)"),
+      stealthDisadvantage: zod.boolean().nullish(),
+      strengthRequirement: zod.number().nullish(),
+      damage: zod
+        .string()
+        .nullish()
+        .describe('Damage dice expression e.g. \"1d8\"'),
+      damageType: zod
+        .string()
+        .nullish()
+        .describe("e.g. slashing, piercing, bludgeoning"),
+      versatileDamage: zod
+        .string()
+        .nullish()
+        .describe('Two-handed damage e.g. \"1d10\"'),
+      weaponProperties: zod.array(zod.string()).nullish(),
+    })
+    .nullish()
+    .describe("Mechanical properties for weapons and armor"),
 });
 
 /**
@@ -548,6 +625,31 @@ export const UpdateInventoryItemBody = zod.object({
   itemType: zod
     .enum(["weapon", "armor", "consumable", "tool", "treasure", "misc"])
     .optional(),
+  itemProperties: zod
+    .object({
+      armorType: zod.enum(["light", "medium", "heavy", "shield"]).nullish(),
+      acBase: zod
+        .number()
+        .nullish()
+        .describe("Base AC value for armor (before modifiers)"),
+      stealthDisadvantage: zod.boolean().nullish(),
+      strengthRequirement: zod.number().nullish(),
+      damage: zod
+        .string()
+        .nullish()
+        .describe('Damage dice expression e.g. \"1d8\"'),
+      damageType: zod
+        .string()
+        .nullish()
+        .describe("e.g. slashing, piercing, bludgeoning"),
+      versatileDamage: zod
+        .string()
+        .nullish()
+        .describe('Two-handed damage e.g. \"1d10\"'),
+      weaponProperties: zod.array(zod.string()).nullish(),
+    })
+    .nullish()
+    .describe("Mechanical properties for weapons and armor"),
 });
 
 export const UpdateInventoryItemResponse = zod.object({
@@ -566,6 +668,31 @@ export const UpdateInventoryItemResponse = zod.object({
     "treasure",
     "misc",
   ]),
+  itemProperties: zod
+    .object({
+      armorType: zod.enum(["light", "medium", "heavy", "shield"]).nullish(),
+      acBase: zod
+        .number()
+        .nullish()
+        .describe("Base AC value for armor (before modifiers)"),
+      stealthDisadvantage: zod.boolean().nullish(),
+      strengthRequirement: zod.number().nullish(),
+      damage: zod
+        .string()
+        .nullish()
+        .describe('Damage dice expression e.g. \"1d8\"'),
+      damageType: zod
+        .string()
+        .nullish()
+        .describe("e.g. slashing, piercing, bludgeoning"),
+      versatileDamage: zod
+        .string()
+        .nullish()
+        .describe('Two-handed damage e.g. \"1d10\"'),
+      weaponProperties: zod.array(zod.string()).nullish(),
+    })
+    .nullish()
+    .describe("Mechanical properties for weapons and armor"),
   createdAt: zod.coerce.date(),
 });
 

@@ -862,6 +862,42 @@ components:
         isMain:
           type: boolean
 
+    ItemProperties:
+      type: object
+      description: Mechanical properties for weapons and armor
+      properties:
+        armorType:
+          type: string
+          enum: [light, medium, heavy, shield]
+          nullable: true
+        acBase:
+          type: integer
+          nullable: true
+          description: Base AC value for armor (before modifiers)
+        stealthDisadvantage:
+          type: boolean
+          nullable: true
+        strengthRequirement:
+          type: integer
+          nullable: true
+        damage:
+          type: string
+          nullable: true
+          description: Damage dice expression e.g. "1d8"
+        damageType:
+          type: string
+          nullable: true
+          description: e.g. slashing, piercing, bludgeoning
+        versatileDamage:
+          type: string
+          nullable: true
+          description: Two-handed damage e.g. "1d10"
+        weaponProperties:
+          type: array
+          nullable: true
+          items:
+            type: string
+
     InventoryItem:
       type: object
       properties:
@@ -884,6 +920,9 @@ components:
         itemType:
           type: string
           enum: [weapon, armor, consumable, tool, treasure, misc]
+        itemProperties:
+          $ref: "#/components/schemas/ItemProperties"
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -907,6 +946,9 @@ components:
         itemType:
           type: string
           enum: [weapon, armor, consumable, tool, treasure, misc]
+        itemProperties:
+          $ref: "#/components/schemas/ItemProperties"
+          nullable: true
       required: [name, quantity, isEquipped, itemType]
 
     UpdateInventoryItemBody:
@@ -927,6 +969,9 @@ components:
         itemType:
           type: string
           enum: [weapon, armor, consumable, tool, treasure, misc]
+        itemProperties:
+          $ref: "#/components/schemas/ItemProperties"
+          nullable: true
 
     RollDiceBody:
       type: object

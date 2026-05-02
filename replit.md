@@ -31,7 +31,11 @@ A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anth
 1. **Landing Page** (`/`) — Public marketing page for signed-out users; auto-redirects signed-in users to `/campaigns`
 2. **Auth** — Clerk-powered sign-in/sign-up at `/sign-in` and `/sign-up` with custom dark fantasy theme
 3. **Campaign Hub** (`/campaigns`) — Per-user campaign list with last-played info; protected route
-4. **Character Creation Wizard** (`/campaign/new`) — 5-step wizard: basics → race → class → ability scores → confirm
+4. **Character Creation Wizard** (`/campaign/new`) — 6-step wizard: basics → race → class+skills → equipment&spells → ability scores → confirm
+   - Step 3: Class grid + skill proficiency selection (class-specific, pick N from list), saving throw info
+   - Step 4: Starting gear packages (2 options per class, armor auto-calculates starting AC) + spell/cantrip selection for spellcasting classes
+   - Step 5: Ability scores (27-pt point buy or 4d6-drop-lowest roll)
+   - All 12 classes supported with full data (hit die, saving throws, skill choices, gear packages, spells)
 5. **Game View** (`/campaign/:id`) — Three-panel desktop layout:
    - **Left**: Character sheet (HP adjuster, stats, spell slots, conditions, XP bar, gold)
    - **Center**: AI DM chat with SSE streaming, dice roll entries, typing indicator
@@ -44,6 +48,10 @@ A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anth
 ## Database Schema
 
 Tables: `campaigns` (with `user_id`), `characters`, `chat_messages`, `quests`, `inventory_items`
+
+### inventory_items fields
+- `item_properties` (jsonb) — mechanical stats: `{ armorType, acBase, stealthDisadvantage, strengthRequirement, damage, damageType, versatileDamage, weaponProperties }`
+- Equipping armor auto-recalculates character AC server-side: light=acBase+DEX, medium=acBase+min(DEX,2), heavy=acBase, shield=+2
 
 ## API Routes
 

@@ -1,7 +1,18 @@
-import { pgTable, serial, text, integer, timestamp, boolean, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { campaigns } from "./campaigns";
+
+export type ItemProperties = {
+  armorType?: "light" | "medium" | "heavy" | "shield";
+  acBase?: number;
+  stealthDisadvantage?: boolean;
+  strengthRequirement?: number;
+  damage?: string;
+  damageType?: string;
+  versatileDamage?: string;
+  weaponProperties?: string[];
+};
 
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
@@ -12,6 +23,7 @@ export const inventoryItems = pgTable("inventory_items", {
   weight: real("weight"),
   isEquipped: boolean("is_equipped").notNull().default(false),
   itemType: text("item_type", { enum: ["weapon", "armor", "consumable", "tool", "treasure", "misc"] }).notNull().default("misc"),
+  itemProperties: jsonb("item_properties").$type<ItemProperties>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

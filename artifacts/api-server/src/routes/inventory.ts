@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inventoryItems, campaigns } from "@workspace/db";
+import { inventoryItems, characters, campaigns } from "@workspace/db";
+import type { ItemProperties } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
@@ -15,6 +16,40 @@ import {
 const router = Router();
 
 router.use(requireAuth);
+
+function calcAC(
+  dex: number,
+  equippedItems: Array<{ itemProperties: ItemProperties | null | undefined }>,
+): number {
+  const dexMod = Math.floor((dex - 10) / 2);
+  let baseAC = 10 + dexMod; // unarmored default
+  let shieldBonus = 0;
+  let hasArmor = false;
+
+  for (const item of equippedItems) {
+    const props = item.itemProperties;
+    if (!props?.armorType || props.acBase == null) continue;
+
+    if (props.armorType === "shield") {
+      shieldBonus = 2;
+    } else {
+      hasArmor = true;
+      if (props.armorType === "light") {
+        baseAC = props.acBase + dexMod;
+      } else if (props.armorType === "medium") {
+        baseAC = props.acBase + Math.min(dexMod, 2);
+      } else if (props.armorType === "heavy") {
+        baseAC = props.acBase;
+      }
+    }
+  }
+
+  if (!hasArmor) {
+    // Keep unarmored default if no armor
+  }
+
+  return baseAC + shieldBonus;
+}
 
 router.get("/campaigns/:campaignId/inventory", async (req, res) => {
   const parsed = ListInventoryParams.safeParse({ campaignId: req.params.campaignId });
@@ -45,9 +80,11 @@ router.post("/campaigns/:campaignId/inventory", async (req, res) => {
       .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
     if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
 
+    const { itemProperties, ...rest } = bodyParsed.data;
     const [item] = await db.insert(inventoryItems).values({
       campaignId: paramsParsed.data.campaignId,
-      ...bodyParsed.data,
+      ...rest,
+      itemProperties: itemProperties as ItemProperties ?? null,
     }).returning();
     res.status(201).json(item);
   } catch (err) {
@@ -71,11 +108,41 @@ router.put("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
       .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
     if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
 
+    const { itemProperties, ...rest } = bodyParsed.data;
+
     const [updated] = await db.update(inventoryItems)
-      .set(bodyParsed.data)
-      .where(and(eq(inventoryItems.id, paramsParsed.data.itemId), eq(inventoryItems.campaignId, paramsParsed.data.campaignId)))
+      .set({
+        ...rest,
+        ...(itemProperties !== undefined ? { itemProperties: itemProperties as ItemProperties } : {}),
+      })
+      .where(and(
+        eq(inventoryItems.id, paramsParsed.data.itemId),
+        eq(inventoryItems.campaignId, paramsParsed.data.campaignId),
+      ))
       .returning();
     if (!updated) return void res.status(404).json({ error: "Item not found" });
+
+    // If equip state changed on an armor/shield item, recalculate AC
+    if (bodyParsed.data.isEquipped !== undefined) {
+      const [character] = await db.select().from(characters)
+        .where(eq(characters.campaignId, paramsParsed.data.campaignId));
+      if (character) {
+        const allItems = await db.select().from(inventoryItems)
+          .where(eq(inventoryItems.campaignId, paramsParsed.data.campaignId));
+        const equipped = allItems.filter(i => i.isEquipped);
+        const hasArmorEquipped = equipped.some(i => {
+          const props = i.itemProperties as ItemProperties | null;
+          return props?.armorType != null;
+        });
+        if (hasArmorEquipped || bodyParsed.data.isEquipped === false) {
+          const newAC = calcAC(character.dexterity, equipped as Array<{ itemProperties: ItemProperties | null | undefined }>);
+          await db.update(characters)
+            .set({ ac: newAC, updatedAt: new Date() })
+            .where(eq(characters.campaignId, paramsParsed.data.campaignId));
+        }
+      }
+    }
+
     res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Failed to update inventory item");
@@ -96,7 +163,10 @@ router.delete("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
     if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
 
     await db.delete(inventoryItems).where(
-      and(eq(inventoryItems.id, paramsParsed.data.itemId), eq(inventoryItems.campaignId, paramsParsed.data.campaignId))
+      and(
+        eq(inventoryItems.id, paramsParsed.data.itemId),
+        eq(inventoryItems.campaignId, paramsParsed.data.campaignId),
+      )
     );
     res.status(204).send();
   } catch (err) {
