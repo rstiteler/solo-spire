@@ -367,6 +367,18 @@ const BASE_STATS = { strength: 8, dexterity: 8, constitution: 8, intelligence: 8
 const STAT_KEYS = ["strength","dexterity","constitution","intelligence","wisdom","charisma"] as const;
 type StatKey = typeof STAT_KEYS[number];
 
+// Standard D&D 5e racial ability score increases
+const RACE_BONUSES: Record<string, Partial<Record<StatKey, number>>> = {
+  Human:       { strength: 1, dexterity: 1, constitution: 1, intelligence: 1, wisdom: 1, charisma: 1 },
+  Elf:         { dexterity: 2, intelligence: 1 },
+  Dwarf:       { constitution: 2, wisdom: 1 },
+  Halfling:    { dexterity: 2 },
+  "Half-Elf":  { charisma: 2, dexterity: 1, constitution: 1 },
+  Tiefling:    { charisma: 2, intelligence: 1 },
+  Dragonborn:  { strength: 2, charisma: 1 },
+  Gnome:       { intelligence: 2 },
+};
+
 function rollAbilityScore(): number {
   const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
   rolls.sort((a, b) => a - b);
@@ -428,6 +440,12 @@ export default function CampaignNew() {
   const pointsSpent = STAT_KEYS.reduce((acc, k) => acc + (COST[form.stats[k]] ?? 0), 0);
   const pointsRemaining = TOTAL_POINTS - pointsSpent;
 
+  // Base stats + racial bonuses = final stats saved to DB
+  const raceBonuses = RACE_BONUSES[form.race || "Human"] ?? {};
+  const finalStats = STAT_KEYS.reduce((acc, k) => ({
+    ...acc, [k]: form.stats[k] + (raceBonuses[k] ?? 0),
+  }), {} as Record<StatKey, number>);
+
   function setField<K extends keyof typeof form>(k: K, v: typeof form[K]) {
     setForm(f => ({ ...f, [k]: v }));
   }
@@ -482,7 +500,7 @@ export default function CampaignNew() {
     try {
       const selectedClass = classInfo;
       const gearItems = selectedClass?.startingGear[form.gearPackageIndex]?.items ?? [];
-      const initialAC = calcInitialAC(form.stats.dexterity, gearItems);
+      const initialAC = calcInitialAC(finalStats.dexterity, gearItems);
 
       const campaign = await createCampaign.mutateAsync({ data: { name: form.campaignName || "The Unnamed Quest" } });
 
@@ -497,16 +515,16 @@ export default function CampaignNew() {
           background: form.background,
           alignment: form.alignment,
           backstory: form.backstory || null,
-          strength: form.stats.strength,
-          dexterity: form.stats.dexterity,
-          constitution: form.stats.constitution,
-          intelligence: form.stats.intelligence,
-          wisdom: form.stats.wisdom,
-          charisma: form.stats.charisma,
+          strength: finalStats.strength,
+          dexterity: finalStats.dexterity,
+          constitution: finalStats.constitution,
+          intelligence: finalStats.intelligence,
+          wisdom: finalStats.wisdom,
+          charisma: finalStats.charisma,
           level: 1,
           xp: 0,
-          hp: (selectedClass?.hitDie ?? 10) + mod(form.stats.constitution),
-          maxHp: (selectedClass?.hitDie ?? 10) + mod(form.stats.constitution),
+          hp: (selectedClass?.hitDie ?? 10) + mod(finalStats.constitution),
+          maxHp: (selectedClass?.hitDie ?? 10) + mod(finalStats.constitution),
           ac: initialAC,
           speed: 30,
           proficiencyBonus: 2,
@@ -814,22 +832,39 @@ export default function CampaignNew() {
               </div>
             )}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {STAT_KEYS.map(k => (
-                <div key={k} className="bg-card border border-border rounded p-3 text-center">
-                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{k.slice(0, 3)}</div>
-                  <div className="font-serif text-2xl font-bold text-foreground">{form.stats[k]}</div>
-                  <div className="text-xs text-primary mb-2">{modStr(form.stats[k])}</div>
-                  {form.usePointBuy && (
-                    <div className="flex justify-center gap-2">
-                      <button data-testid={`button-stat-minus-${k}`} onClick={() => setStat(k, form.stats[k] - 1)} disabled={form.stats[k] <= 8}
-                        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 text-sm">-</button>
-                      <button data-testid={`button-stat-plus-${k}`} onClick={() => setStat(k, form.stats[k] + 1)} disabled={form.stats[k] >= 15 || pointsRemaining <= 0}
-                        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 text-sm">+</button>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {STAT_KEYS.map(k => {
+                const bonus = raceBonuses[k] ?? 0;
+                const final = finalStats[k];
+                return (
+                  <div key={k} className="bg-card border border-border rounded p-3 text-center">
+                    <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{k.slice(0, 3)}</div>
+                    {bonus > 0 ? (
+                      <div className="flex items-center justify-center gap-1 mb-0.5">
+                        <span className="font-serif text-xl font-bold text-foreground/70">{form.stats[k]}</span>
+                        <span className="text-xs text-primary/60">+{bonus}</span>
+                        <span className="font-serif text-2xl font-bold text-primary">= {final}</span>
+                      </div>
+                    ) : (
+                      <div className="font-serif text-2xl font-bold text-foreground mb-0.5">{final}</div>
+                    )}
+                    <div className="text-xs text-primary mb-2">{modStr(final)}</div>
+                    {form.usePointBuy && (
+                      <div className="flex justify-center gap-2">
+                        <button data-testid={`button-stat-minus-${k}`} onClick={() => setStat(k, form.stats[k] - 1)} disabled={form.stats[k] <= 8}
+                          className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 text-sm">-</button>
+                        <button data-testid={`button-stat-plus-${k}`} onClick={() => setStat(k, form.stats[k] + 1)} disabled={form.stats[k] >= 15 || pointsRemaining <= 0}
+                          className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-30 text-sm">+</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+            {Object.keys(raceBonuses).length > 0 && (
+              <p className="text-xs text-muted-foreground/70 text-center">
+                <span className="text-primary/70">{form.race || "Human"} racial bonuses</span> are shown in blue — the highlighted totals are your final stats.
+              </p>
+            )}
           </div>
         )}
 
@@ -850,7 +885,7 @@ export default function CampaignNew() {
                   ["Class", form.class || "Fighter"],
                   ["Background", form.background],
                   ["Alignment", form.alignment],
-                  ["HP", String((classInfo?.hitDie ?? 10) + mod(form.stats.constitution))],
+                  ["HP", String((classInfo?.hitDie ?? 10) + mod(finalStats.constitution))],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <div className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">{label}</div>
@@ -861,15 +896,19 @@ export default function CampaignNew() {
 
               {/* Ability Scores */}
               <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Ability Scores</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Ability Scores (with racial bonuses)</div>
                 <div className="grid grid-cols-6 gap-2">
-                  {STAT_KEYS.map(k => (
-                    <div key={k} className="text-center">
-                      <div className="text-xs text-muted-foreground uppercase">{k.slice(0, 3)}</div>
-                      <div className="font-bold text-foreground">{form.stats[k]}</div>
-                      <div className="text-xs text-primary">{modStr(form.stats[k])}</div>
-                    </div>
-                  ))}
+                  {STAT_KEYS.map(k => {
+                    const bonus = raceBonuses[k] ?? 0;
+                    return (
+                      <div key={k} className="text-center">
+                        <div className="text-xs text-muted-foreground uppercase">{k.slice(0, 3)}</div>
+                        <div className={`font-bold ${bonus > 0 ? "text-primary" : "text-foreground"}`}>{finalStats[k]}</div>
+                        {bonus > 0 && <div className="text-xs text-primary/60">+{bonus}</div>}
+                        <div className="text-xs text-primary">{modStr(finalStats[k])}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -897,7 +936,7 @@ export default function CampaignNew() {
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Starting Gear</div>
                 <div className="text-sm text-muted-foreground">{classInfo?.startingGear[form.gearPackageIndex]?.label ?? "—"}</div>
-                <div className="text-xs text-primary mt-1">Starting AC: {calcInitialAC(form.stats.dexterity, classInfo?.startingGear[form.gearPackageIndex]?.items ?? [])}</div>
+                <div className="text-xs text-primary mt-1">Starting AC: {calcInitialAC(finalStats.dexterity, classInfo?.startingGear[form.gearPackageIndex]?.items ?? [])}</div>
               </div>
 
               {/* Spells */}
