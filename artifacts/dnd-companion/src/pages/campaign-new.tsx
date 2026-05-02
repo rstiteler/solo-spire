@@ -50,6 +50,7 @@ type ClassInfo = {
   cantrips?: string[];
   firstLevelSpells?: string[];
   startingGear: GearPackage[];
+  subclasses?: { name: string; description: string; features: string[] }[];
 };
 
 // ─── Data ──────────────────────────────────────────────────────────────────
@@ -144,10 +145,19 @@ const CLASSES: ClassInfo[] = [
   },
   {
     name: "Cleric", icon: "☩", hitDie: 8,
-    features: ["Spellcasting (Wisdom)", "Divine Domain features", "Channel Divinity: powerful divine effects", "Turn Undead"],
+    features: ["Spellcasting (Wisdom)", "Divine Domain chosen at level 1", "Channel Divinity: powerful divine effects", "Turn Undead"],
     savingThrows: ["Wisdom", "Charisma"],
     skillChoices: { from: ["History","Insight","Medicine","Persuasion","Religion"], count: 2 },
     armorProficiencies: "Light, medium, shields", weaponProficiencies: "Simple weapons",
+    subclasses: [
+      { name: "Life Domain", description: "You focus on healing and protecting the living.", features: ["Bonus Proficiency: heavy armor", "Disciple of Life: healing spells restore extra HP equal to 2 + spell level", "Domain Spells: Bless, Cure Wounds, Lesser Restoration, Spiritual Weapon, Beacon of Hope, Revivify"] },
+      { name: "Light Domain", description: "You wield radiant energy and scour the darkness.", features: ["Bonus Cantrip: Light", "Warding Flare (WIS mod/day): impose disadvantage on an attack roll against you as a reaction", "Domain Spells: Burning Hands, Faerie Fire, Flaming Sphere, Scorching Ray, Daylight, Fireball"] },
+      { name: "Trickery Domain", description: "You serve a deity of deception, illusion, and cunning.", features: ["Blessing of the Trickster: touch a willing creature to give it advantage on Stealth checks for 1 hour", "Domain Spells: Charm Person, Disguise Self, Mirror Image, Pass Without Trace, Blink, Dispel Magic"] },
+      { name: "Knowledge Domain", description: "You seek hidden truths and preserve ancient lore.", features: ["Blessings of Knowledge: gain proficiency and expertise in 2 skills from Arcana, History, Nature, or Religion", "Domain Spells: Command, Identify, Augury, Suggestion, Nondetection, Speak with Dead"] },
+      { name: "War Domain", description: "You are a warrior-priest who revels in battle.", features: ["Bonus Proficiencies: martial weapons, heavy armor", "War Priest (WIS mod/day): bonus action to make an extra weapon attack after the Attack action", "Domain Spells: Divine Favor, Shield of Faith, Magic Weapon, Spiritual Weapon, Crusader's Mantle, Spirit Guardians"] },
+      { name: "Nature Domain", description: "You are a servant of nature and the natural world.", features: ["Acolyte of Nature: learn a Druid cantrip and gain proficiency in one nature-related skill", "Bonus Proficiency: heavy armor", "Domain Spells: Animal Friendship, Speak with Animals, Barkskin, Spike Growth, Plant Growth, Wind Wall"] },
+      { name: "Tempest Domain", description: "You channel the fury of storms, lightning, and the sea.", features: ["Bonus Proficiencies: martial weapons, heavy armor", "Wrath of the Storm (WIS mod/day): reaction to deal 2d8 lightning or thunder damage to an attacker", "Domain Spells: Fog Cloud, Thunderwave, Gust of Wind, Shatter, Call Lightning, Sleet Storm"] },
+    ],
     spellcastingAbility: "Wisdom", cantripsKnown: 3, spellsKnown: 4,
     spellSlots: { "1": 2 },
     cantrips: ["Sacred Flame","Guidance","Thaumaturgy","Light","Spare the Dying","Resistance","Toll the Dead","Word of Radiance","Mending","Inflict Wounds"],
@@ -289,8 +299,14 @@ const CLASSES: ClassInfo[] = [
   },
   {
     name: "Warlock", icon: "◈", hitDie: 8,
-    features: ["Eldritch Blast cantrip", "Pact Magic: few but recovering spell slots", "Eldritch Invocations", "Patron: otherworldly benefactor"],
+    features: ["Eldritch Blast cantrip", "Pact Magic: few but recovering spell slots", "Eldritch Invocations", "Otherworldly Patron chosen at level 1"],
     savingThrows: ["Wisdom", "Charisma"],
+    subclasses: [
+      { name: "The Fiend", description: "Your patron is a powerful devil or demon from the Lower Planes who offers power in exchange for service.", features: ["Dark One's Blessing: when you reduce a hostile creature to 0 HP, gain temp HP equal to your CHA modifier + warlock level", "Expanded Spells: Burning Hands, Command, Blindness/Deafness, Scorching Ray, Fireball, Stinking Cloud, Fire Shield, Wall of Fire"] },
+      { name: "The Great Old One", description: "Your patron is an alien entity of incomprehensible power that exists beyond the stars.", features: ["Awakened Mind: you can telepathically speak to any creature within 30 feet that you can see", "Expanded Spells: Dissonant Whispers, Tasha's Hideous Laughter, Detect Thoughts, Phantasmal Force, Clairvoyance, Sending, Dominate Beast, Evard's Black Tentacles"] },
+      { name: "The Archfey", description: "Your patron is a lord or lady of the fey, a being of immense power who rules over a domain in the Feywild.", features: ["Fey Presence (1/short rest): as an action, charm or frighten all creatures within 10 feet (WIS save to resist)", "Expanded Spells: Faerie Fire, Sleep, Calm Emotions, Phantasmal Force, Blink, Plant Growth, Dominate Beast, Greater Invisibility"] },
+      { name: "The Hexblade", description: "You made your pact with a mysterious entity from the Shadowfell bound to a powerful weapon.", features: ["Hexblade's Curse (1/short rest): curse a target — bonus damage, crit range expands to 19-20, regain HP equal to your level + CHA modifier when it dies", "Hex Warrior: proficiency with medium armor, shields, and martial weapons; choose one weapon to use CHA modifier for attacks"] },
+    ],
     skillChoices: { from: ["Arcana","Deception","History","Intimidation","Investigation","Nature","Religion"], count: 2 },
     armorProficiencies: "Light armor", weaponProficiencies: "Simple weapons",
     spellcastingAbility: "Charisma", cantripsKnown: 2, spellsKnown: 2,
@@ -316,8 +332,14 @@ const CLASSES: ClassInfo[] = [
   },
   {
     name: "Sorcerer", icon: "✧", hitDie: 6,
-    features: ["Spellcasting (Charisma)", "Sorcery Points: flexible spell resource", "Metamagic: enhance spell casting", "Font of Magic"],
+    features: ["Spellcasting (Charisma)", "Sorcery Points: flexible spell resource", "Metamagic: enhance spell casting", "Sorcerous Origin chosen at level 1"],
     savingThrows: ["Constitution", "Charisma"],
+    subclasses: [
+      { name: "Draconic Bloodline", description: "Magic flows through you from a dragon ancestor, filling you with primal power.", features: ["Dragon Ancestor: choose a dragon type (fire, cold, lightning, acid, poison) — related damage spells ignore resistance", "Draconic Resilience: +1 HP per sorcerer level; when not wearing armor, AC = 13 + DEX modifier"] },
+      { name: "Wild Magic", description: "Your magic is fueled by the chaotic forces of the Far Realm, producing unpredictable surges.", features: ["Wild Magic Surge: after casting a 1st level or higher spell, roll d20 — on a 1, roll on the Wild Magic Surge table", "Tides of Chaos (1/long rest): gain advantage on one attack roll, ability check, or saving throw"] },
+      { name: "Divine Soul", description: "Your innate magic comes from a divine source — a gift, a blessing, or a terrible curse.", features: ["Divine Magic: gain access to the Cleric spell list in addition to the Sorcerer list", "Favored by the Gods (1/short rest): if you fail a saving throw or miss an attack roll, add 2d4 to the total"] },
+      { name: "Shadow Magic", description: "You draw power from the Shadowfell, the dark reflection of the mortal world.", features: ["Eyes of the Dark: Darkvision 120 ft; spend 1 sorcery point to cast Darkness without concentration", "Strength of the Grave (proficiency bonus/long rest): when reduced to 0 HP, make a CON save (DC 5 + damage taken) to stay at 1 HP instead"] },
+    ],
     skillChoices: { from: ["Arcana","Deception","Insight","Intimidation","Persuasion","Religion"], count: 2 },
     armorProficiencies: "None", weaponProficiencies: "Daggers, darts, slings, quarterstaffs, light crossbows",
     spellcastingAbility: "Charisma", cantripsKnown: 4, spellsKnown: 2,
@@ -426,6 +448,7 @@ export default function CampaignNew() {
     backstory: "",
     race: "",
     class: "",
+    selectedSubclass: "",
     usePointBuy: true,
     stats: { ...BASE_STATS },
     rolledStats: null as null | Record<StatKey, number>,
@@ -491,6 +514,8 @@ export default function CampaignNew() {
   function canAdvance(): boolean {
     if (step === 3 && form.class) {
       const max = classInfo?.skillChoices.count ?? 2;
+      const needsSubclass = (classInfo?.subclasses?.length ?? 0) > 0;
+      if (needsSubclass && !form.selectedSubclass) return false;
       return form.selectedSkills.length === max;
     }
     return true;
@@ -534,6 +559,7 @@ export default function CampaignNew() {
           knownSpells,
           spellSlots: selectedClass?.spellSlots ?? undefined,
           spellSlotsUsed: selectedClass?.spellSlots ? Object.fromEntries(Object.keys(selectedClass.spellSlots).map(k => [k, 0])) : undefined,
+          features: form.selectedSubclass ? [form.selectedSubclass] : [],
         },
       });
 
@@ -650,7 +676,7 @@ export default function CampaignNew() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {CLASSES.map(c => (
                 <button key={c.name} data-testid={`button-class-${c.name.toLowerCase()}`}
-                  onClick={() => { setField("class", c.name); setField("selectedSkills", []); setField("selectedCantrips", []); setField("selectedSpells", []); }}
+                  onClick={() => { setField("class", c.name); setField("selectedSubclass", ""); setField("selectedSkills", []); setField("selectedCantrips", []); setField("selectedSpells", []); }}
                   className={`p-4 rounded border text-left transition-all ${form.class === c.name ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:border-primary/50"}`}>
                   <div className="text-lg mb-1">{c.icon}</div>
                   <div className="font-serif font-semibold text-sm">{c.name}</div>
@@ -673,6 +699,56 @@ export default function CampaignNew() {
                     <div className="col-span-2"><span className="text-foreground/70 font-medium">Weapons:</span> {classInfo.weaponProficiencies}</div>
                   </div>
                 </div>
+
+                {/* Subclass picker — for classes that choose at level 1 */}
+                {classInfo.subclasses && classInfo.subclasses.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-serif text-foreground">
+                        {classInfo.name === "Warlock" ? "Otherworldly Patron" : classInfo.name === "Sorcerer" ? "Sorcerous Origin" : "Divine Domain"}
+                      </h3>
+                      {!form.selectedSubclass && (
+                        <span className="text-xs text-amber-500 font-medium">Required</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {classInfo.name === "Warlock"
+                        ? "Choose your patron — the otherworldly being that grants you your power."
+                        : classInfo.name === "Sorcerer"
+                        ? "Choose your origin — the source from which your innate magic flows."
+                        : "Choose your domain — the divine aspect your deity grants you mastery over."}
+                    </p>
+                    <div className="space-y-2">
+                      {classInfo.subclasses.map(sub => {
+                        const selected = form.selectedSubclass === sub.name;
+                        return (
+                          <button key={sub.name} onClick={() => setField("selectedSubclass", sub.name)}
+                            className={`w-full rounded border p-3 text-left transition-all ${selected ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"}`}>
+                            <div className="flex items-start gap-3">
+                              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${selected ? "border-primary" : "border-border"}`}>
+                                {selected && <div className="w-2 h-2 rounded-full bg-primary" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-serif font-semibold text-sm ${selected ? "text-primary" : "text-foreground"}`}>{sub.name}</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">{sub.description}</div>
+                                {selected && (
+                                  <ul className="mt-2 space-y-1">
+                                    {sub.features.map(f => (
+                                      <li key={f} className="text-xs text-muted-foreground flex gap-1.5">
+                                        <span className="text-primary mt-0.5 flex-shrink-0">•</span>
+                                        <span>{f}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Skill proficiency selection */}
                 <div>
@@ -883,13 +959,17 @@ export default function CampaignNew() {
                   ["Name", form.characterName || "The Nameless One"],
                   ["Race", form.race || "Human"],
                   ["Class", form.class || "Fighter"],
+                  ...(form.selectedSubclass ? [[
+                    classInfo?.name === "Warlock" ? "Patron" : classInfo?.name === "Sorcerer" ? "Origin" : "Domain",
+                    form.selectedSubclass
+                  ]] : []),
                   ["Background", form.background],
                   ["Alignment", form.alignment],
                   ["HP", String((classInfo?.hitDie ?? 10) + mod(finalStats.constitution))],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <div className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">{label}</div>
-                    <div className="text-sm text-foreground">{value}</div>
+                    <div className={`text-sm ${label === "Patron" || label === "Origin" || label === "Domain" ? "text-primary" : "text-foreground"}`}>{value}</div>
                   </div>
                 ))}
               </div>

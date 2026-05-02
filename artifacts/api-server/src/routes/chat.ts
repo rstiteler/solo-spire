@@ -146,7 +146,9 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
     if (campaign.currentScene) contextBlock += `\nScene: ${campaign.currentScene}`;
     if (campaign.currentLocation) contextBlock += `\nLocation: ${campaign.currentLocation}`;
     if (character) {
-      contextBlock += `\nCharacter: ${character.name}, ${character.race} ${character.class}, Level ${character.level}`;
+      const features = character.features as string[] | null;
+      const subclass = features && features.length > 0 ? features[0] : null;
+      contextBlock += `\nCharacter: ${character.name}, ${character.race} ${character.class}${subclass ? ` (${subclass})` : ""}, Level ${character.level}`;
       contextBlock += `\nHP: ${character.hp}/${character.maxHp}${character.tempHp > 0 ? ` (+${character.tempHp} temp)` : ""}`;
       contextBlock += `\nAC: ${character.ac}, Speed: ${character.speed}, XP: ${character.xp}`;
       if (character.conditions && (character.conditions as string[]).length > 0) {
