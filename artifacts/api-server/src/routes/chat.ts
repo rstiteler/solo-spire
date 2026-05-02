@@ -35,6 +35,7 @@ QUEST AND XP TRACKING:
   <STATE_UPDATE>{"quests": [{"action": "add"|"complete"|"fail", "title": "...", "description": "...", "isMain": true|false}], "xp": <number to award this turn>, "gold": <gold change>, "items": [{"action": "add"|"remove", "name": "...", "itemType": "weapon"|"armor"|"consumable"|"tool"|"treasure"|"misc", "quantity": 1}]}</STATE_UPDATE>
 - Only include fields that changed. Omit the STATE_UPDATE block entirely if nothing changed.
 - XP thresholds by level: L1→300, L2→600, L3→1800, L4→3800, L5→7500, L6→9000, L7→11000, L8→14000, L9→16000, L10→21000
+- CRITICAL: Only emit STATE_UPDATE once for each real in-game event. NEVER re-emit rewards, items, XP, or gold that were already granted in a previous response, even if you reference those same items in later narration. Each STATE_UPDATE represents new changes only — not a recap of past changes.
 
 HP TRACKING:
 - When the player takes damage or heals, clearly state the new HP total.
@@ -225,13 +226,36 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
           }
         }
         if (stateUpdate.items) {
+          const currentInventory = await db.select().from(inventoryItems).where(eq(inventoryItems.campaignId, campaignId));
           for (const item of stateUpdate.items) {
+            const normalizedName = item.name.trim().toLowerCase();
+            const existing = currentInventory.find(i => i.name.trim().toLowerCase() === normalizedName);
             if (item.action === "add") {
-              await db.insert(inventoryItems).values({
-                campaignId, name: item.name,
-                itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
-                quantity: item.quantity ?? 1, isEquipped: false,
-              });
+              if (existing) {
+                // Item already exists — increment quantity instead of duplicating
+                await db.update(inventoryItems)
+                  .set({ quantity: existing.quantity + (item.quantity ?? 1) })
+                  .where(eq(inventoryItems.id, existing.id));
+                existing.quantity += (item.quantity ?? 1); // keep local copy in sync
+              } else {
+                const newItem = await db.insert(inventoryItems).values({
+                  campaignId, name: item.name.trim(),
+                  itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
+                  quantity: item.quantity ?? 1, isEquipped: false,
+                }).returning();
+                if (newItem[0]) currentInventory.push(newItem[0]); // keep local copy in sync
+              }
+            } else if (item.action === "remove") {
+              if (existing) {
+                const removeQty = item.quantity ?? 1;
+                if (existing.quantity <= removeQty) {
+                  await db.delete(inventoryItems).where(eq(inventoryItems.id, existing.id));
+                } else {
+                  await db.update(inventoryItems)
+                    .set({ quantity: existing.quantity - removeQty })
+                    .where(eq(inventoryItems.id, existing.id));
+                }
+              }
             }
           }
         }
