@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ChevronLeft, Save, Send, Dices, Sword, Shield, Heart, Zap, BookOpen, Package,
   ChevronDown, ChevronUp, User, Star, CheckCircle, XCircle, Minus, Plus, Scroll,
-  Trash2, PlusCircle, Info
+  Trash2, PlusCircle, Info, Pencil
 } from "lucide-react";
 
 type ItemProps = {
@@ -126,6 +126,278 @@ const CLASS_LEVEL_FEATURES: Record<string, Record<number, string[]>> = {
   },
 };
 
+// ─── Edit Character Constants ───────────────────────────────────────────────
+
+const SUBCLASS_OPTIONS: Record<string, { label: string; options: string[] }> = {
+  Warlock: { label: "Otherworldly Patron", options: ["The Fiend", "The Great Old One", "The Archfey", "The Hexblade"] },
+  Sorcerer: { label: "Sorcerous Origin", options: ["Draconic Bloodline", "Wild Magic", "Divine Soul", "Shadow Magic"] },
+  Cleric: { label: "Divine Domain", options: ["Life Domain", "Light Domain", "Trickery Domain", "Knowledge Domain", "War Domain", "Nature Domain", "Tempest Domain"] },
+};
+const EDIT_RACES = ["Human", "Elf", "Dwarf", "Halfling", "Half-Elf", "Tiefling", "Dragonborn", "Gnome"];
+const EDIT_CLASSES = ["Barbarian", "Bard", "Cleric", "Druid", "Fighter", "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"];
+const EDIT_BACKGROUNDS = ["Acolyte", "Charlatan", "Criminal", "Entertainer", "Folk Hero", "Guild Artisan", "Hermit", "Noble", "Outlander", "Sage", "Sailor", "Soldier", "Urchin"];
+const EDIT_ALIGNMENTS = ["Lawful Good", "Neutral Good", "Chaotic Good", "Lawful Neutral", "True Neutral", "Chaotic Neutral", "Lawful Evil", "Neutral Evil", "Chaotic Evil"];
+const EDIT_ALL_SKILLS = [
+  "Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History",
+  "Insight", "Intimidation", "Investigation", "Medicine", "Nature", "Perception",
+  "Performance", "Persuasion", "Religion", "Sleight of Hand", "Stealth", "Survival",
+];
+const EDIT_SAVING_THROWS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
+
+// ─── Edit Character Modal ───────────────────────────────────────────────────
+
+function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClose: () => void }) {
+  const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
+  const updateCharacter = useUpdateCharacter();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies">("identity");
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState(() => {
+    const features = (char?.features as string[] | null) ?? [];
+    return {
+      name: char?.name ?? "",
+      race: char?.race ?? "Human",
+      charClass: char?.class ?? "Fighter",
+      subclass: features[0] ?? "",
+      background: char?.background ?? "Folk Hero",
+      alignment: char?.alignment ?? "True Neutral",
+      backstory: char?.backstory ?? "",
+      strength: char?.strength ?? 10,
+      dexterity: char?.dexterity ?? 10,
+      constitution: char?.constitution ?? 10,
+      intelligence: char?.intelligence ?? 10,
+      wisdom: char?.wisdom ?? 10,
+      charisma: char?.charisma ?? 10,
+      maxHp: char?.maxHp ?? 10,
+      ac: char?.ac ?? 10,
+      speed: char?.speed ?? 30,
+      proficiencyBonus: char?.proficiencyBonus ?? 2,
+      skillProficiencies: (char?.skillProficiencies as string[] | null) ?? [],
+      savingThrowProficiencies: (char?.savingThrowProficiencies as string[] | null) ?? [],
+    };
+  });
+
+  function setField<K extends keyof typeof form>(k: K, v: typeof form[K]) {
+    setForm(f => ({ ...f, [k]: v }));
+  }
+
+  function toggleSkill(skill: string) {
+    setForm(f => ({
+      ...f,
+      skillProficiencies: f.skillProficiencies.includes(skill)
+        ? f.skillProficiencies.filter(s => s !== skill)
+        : [...f.skillProficiencies, skill],
+    }));
+  }
+
+  function toggleSave(save: string) {
+    setForm(f => ({
+      ...f,
+      savingThrowProficiencies: f.savingThrowProficiencies.includes(save)
+        ? f.savingThrowProficiencies.filter(s => s !== save)
+        : [...f.savingThrowProficiencies, save],
+    }));
+  }
+
+  function adjustNum(k: "strength"|"dexterity"|"constitution"|"intelligence"|"wisdom"|"charisma"|"maxHp"|"ac"|"speed"|"proficiencyBonus", delta: number, min: number, max: number) {
+    setForm(f => ({ ...f, [k]: Math.min(max, Math.max(min, f[k] + delta)) }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await updateCharacter.mutateAsync({
+        campaignId,
+        data: {
+          name: form.name,
+          race: form.race,
+          class: form.charClass,
+          background: form.background,
+          alignment: form.alignment,
+          backstory: form.backstory || null,
+          strength: form.strength,
+          dexterity: form.dexterity,
+          constitution: form.constitution,
+          intelligence: form.intelligence,
+          wisdom: form.wisdom,
+          charisma: form.charisma,
+          maxHp: form.maxHp,
+          ac: form.ac,
+          speed: form.speed,
+          proficiencyBonus: form.proficiencyBonus,
+          skillProficiencies: form.skillProficiencies,
+          savingThrowProficiencies: form.savingThrowProficiencies,
+          features: form.subclass ? [form.subclass] : [],
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+      toast({ title: "Character updated" });
+      onClose();
+    } catch {
+      toast({ title: "Failed to save changes", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const subclassInfo = SUBCLASS_OPTIONS[form.charClass];
+
+  const numField = (k: "strength"|"dexterity"|"constitution"|"intelligence"|"wisdom"|"charisma"|"maxHp"|"ac"|"speed"|"proficiencyBonus", label: string, min: number, max: number) => (
+    <div key={k} className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-1">
+        <button onClick={() => adjustNum(k, -1, min, max)}
+          className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground flex items-center justify-center text-xs">−</button>
+        <div className="flex-1 text-center font-serif font-bold text-sm text-foreground bg-card border border-border rounded py-1 min-w-[2.5rem]">{form[k]}</div>
+        <button onClick={() => adjustNum(k, 1, min, max)}
+          className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground flex items-center justify-center text-xs">+</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto bg-background border-border">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-primary">Edit Character Sheet</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-1 border-b border-border pb-2">
+          {(["identity", "stats", "proficiencies"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-1.5 rounded text-xs font-medium capitalize transition-colors ${tab === t ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === "identity" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 col-span-2">
+                <Label className="text-xs text-muted-foreground">Character Name</Label>
+                <Input value={form.name} onChange={e => setField("name", e.target.value)} className="h-8 text-sm bg-card border-border" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Race</Label>
+                <Select value={form.race} onValueChange={v => setField("race", v)}>
+                  <SelectTrigger className="h-8 text-sm bg-card border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>{EDIT_RACES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Class</Label>
+                <Select value={form.charClass} onValueChange={v => { setField("charClass", v); setField("subclass", ""); }}>
+                  <SelectTrigger className="h-8 text-sm bg-card border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>{EDIT_CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {subclassInfo && (
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-xs text-muted-foreground">{subclassInfo.label}</Label>
+                  <Select value={form.subclass} onValueChange={v => setField("subclass", v)}>
+                    <SelectTrigger className="h-8 text-sm bg-card border-border"><SelectValue placeholder="Choose…" /></SelectTrigger>
+                    <SelectContent>{subclassInfo.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Background</Label>
+                <Select value={form.background} onValueChange={v => setField("background", v)}>
+                  <SelectTrigger className="h-8 text-sm bg-card border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>{EDIT_BACKGROUNDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Alignment</Label>
+                <Select value={form.alignment} onValueChange={v => setField("alignment", v)}>
+                  <SelectTrigger className="h-8 text-sm bg-card border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>{EDIT_ALIGNMENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Backstory</Label>
+              <Textarea value={form.backstory} onChange={e => setField("backstory", e.target.value)}
+                rows={4} className="text-sm bg-card border-border resize-none"
+                placeholder="Your character's history and motivations…" />
+            </div>
+          </div>
+        )}
+
+        {tab === "stats" && (
+          <div className="space-y-5">
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Ability Scores</div>
+              <div className="grid grid-cols-3 gap-2">
+                {numField("strength", "STR", 1, 30)}
+                {numField("dexterity", "DEX", 1, 30)}
+                {numField("constitution", "CON", 1, 30)}
+                {numField("intelligence", "INT", 1, 30)}
+                {numField("wisdom", "WIS", 1, 30)}
+                {numField("charisma", "CHA", 1, 30)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Combat & Movement</div>
+              <div className="grid grid-cols-2 gap-2">
+                {numField("maxHp", "Max HP", 1, 999)}
+                {numField("ac", "Armor Class", 1, 30)}
+                {numField("speed", "Speed (ft)", 0, 120)}
+                {numField("proficiencyBonus", "Prof. Bonus", 2, 6)}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground/50 italic">Changing Max HP here does not change your current HP automatically.</p>
+          </div>
+        )}
+
+        {tab === "proficiencies" && (
+          <div className="space-y-4">
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Saving Throws</div>
+              <div className="flex flex-wrap gap-2">
+                {EDIT_SAVING_THROWS.map(s => {
+                  const on = form.savingThrowProficiencies.includes(s);
+                  return (
+                    <button key={s} onClick={() => toggleSave(s)}
+                      className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Skill Proficiencies</div>
+              <div className="flex flex-wrap gap-2">
+                {EDIT_ALL_SKILLS.map(s => {
+                  const on = form.skillProficiencies.includes(s);
+                  return (
+                    <button key={s} onClick={() => toggleSkill(s)}
+                      className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button variant="outline" onClick={onClose} className="border-border text-muted-foreground hover:text-foreground">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90 font-serif">
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Dice Tray ─────────────────────────────────────────────────────────────
 
 function DiceTray({ onRoll }: { onRoll: (roll: DiceRoll) => void }) {
@@ -199,6 +471,7 @@ function HPBar({ hp, maxHp, tempHp, campaignId }: { hp: number; maxHp: number; t
 function CharacterPanel({ campaignId }: { campaignId: number }) {
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const { data: campaign } = useGetCampaign(campaignId, { query: { queryKey: getGetCampaignQueryKey(campaignId) } });
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!char) return <div className="p-4 text-muted-foreground text-sm font-serif italic">No character found.</div>;
 
@@ -216,12 +489,15 @@ function CharacterPanel({ campaignId }: { campaignId: number }) {
   return (
     <div className="h-full overflow-y-auto px-4 py-4 space-y-5 scrollbar-thin">
       {/* Portrait */}
-      <div className="text-center">
+      <div className="text-center relative">
         <div className="w-20 h-20 mx-auto rounded-full border-2 border-primary/40 bg-card flex items-center justify-center mb-2 overflow-hidden">
           {char.portraitUrl ? <img src={char.portraitUrl} alt={char.name} className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-muted-foreground/50" />}
         </div>
         <div className="font-serif text-base font-bold text-foreground" data-testid="text-character-name">{char.name}</div>
         <div className="text-xs text-muted-foreground">{char.race} {char.class}</div>
+        {(char.features as string[] | null)?.[0] && (
+          <div className="text-xs text-primary/70 italic">{(char.features as string[])[0]}</div>
+        )}
         <div className="text-xs text-primary font-bold">Level {lvl}</div>
         {char.portraitDescription && (
           <details className="mt-1">
@@ -229,6 +505,11 @@ function CharacterPanel({ campaignId }: { campaignId: number }) {
             <p className="text-xs text-muted-foreground/80 mt-1 font-serif italic leading-relaxed">{char.portraitDescription}</p>
           </details>
         )}
+        <button onClick={() => setEditOpen(true)} data-testid="button-edit-character"
+          title="Edit character sheet"
+          className="absolute top-0 right-0 p-1.5 rounded text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* XP */}
@@ -360,6 +641,8 @@ function CharacterPanel({ campaignId }: { campaignId: number }) {
         <span className="text-xs text-muted-foreground">Gold</span>
         <span className="font-serif font-bold text-primary" data-testid="text-gold">{campaign?.gold ?? 0} gp</span>
       </div>
+
+      {editOpen && <EditCharacterModal campaignId={campaignId} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }
