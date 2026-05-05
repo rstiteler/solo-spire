@@ -383,6 +383,22 @@ const CLASSES: ClassInfo[] = [
 ];
 
 const BACKGROUNDS = ["Acolyte","Charlatan","Criminal","Entertainer","Folk Hero","Guild Artisan","Hermit","Noble","Outlander","Sage","Sailor","Soldier","Urchin"];
+
+const BACKGROUND_PROFICIENCIES: Record<string, [string, string]> = {
+  "Acolyte": ["Insight", "Religion"],
+  "Charlatan": ["Deception", "Sleight of Hand"],
+  "Criminal": ["Deception", "Stealth"],
+  "Entertainer": ["Acrobatics", "Performance"],
+  "Folk Hero": ["Animal Handling", "Survival"],
+  "Guild Artisan": ["Insight", "Persuasion"],
+  "Hermit": ["Medicine", "Religion"],
+  "Noble": ["History", "Persuasion"],
+  "Outlander": ["Athletics", "Survival"],
+  "Sage": ["Arcana", "History"],
+  "Sailor": ["Athletics", "Perception"],
+  "Soldier": ["Athletics", "Intimidation"],
+  "Urchin": ["Sleight of Hand", "Stealth"],
+};
 const ALIGNMENTS = ["Lawful Good","Neutral Good","Chaotic Good","Lawful Neutral","True Neutral","Chaotic Neutral","Lawful Evil","Neutral Evil","Chaotic Evil"];
 
 const BASE_STATS = { strength: 8, dexterity: 8, constitution: 8, intelligence: 8, wisdom: 8, charisma: 8 };
@@ -554,7 +570,7 @@ export default function CampaignNew() {
           speed: 30,
           proficiencyBonus: 2,
           tempHp: 0,
-          skillProficiencies: form.selectedSkills,
+          skillProficiencies: [...new Set([...form.selectedSkills, ...(BACKGROUND_PROFICIENCIES[form.background] ?? [])])],
           savingThrowProficiencies: selectedClass?.savingThrows ?? [],
           knownSpells,
           spellSlots: selectedClass?.spellSlots ?? undefined,
@@ -629,6 +645,9 @@ export default function CampaignNew() {
                   <select data-testid="select-background" value={form.background} onChange={e => setField("background", e.target.value)} className="mt-1 w-full bg-card border border-border text-foreground rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                     {BACKGROUNDS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
+                  {BACKGROUND_PROFICIENCIES[form.background] && (
+                    <p className="mt-1 text-xs text-primary/70">Grants: {BACKGROUND_PROFICIENCIES[form.background].join(" & ")}</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-muted-foreground text-sm">Alignment</Label>

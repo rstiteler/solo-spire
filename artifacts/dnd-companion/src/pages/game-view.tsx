@@ -156,6 +156,31 @@ const EDIT_ALL_SKILLS = [
 ];
 const EDIT_SAVING_THROWS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 
+const BACKGROUND_PROFICIENCIES: Record<string, [string, string]> = {
+  "Acolyte": ["Insight", "Religion"],
+  "Charlatan": ["Deception", "Sleight of Hand"],
+  "Criminal": ["Deception", "Stealth"],
+  "Entertainer": ["Acrobatics", "Performance"],
+  "Folk Hero": ["Animal Handling", "Survival"],
+  "Guild Artisan": ["Insight", "Persuasion"],
+  "Hermit": ["Medicine", "Religion"],
+  "Noble": ["History", "Persuasion"],
+  "Outlander": ["Athletics", "Survival"],
+  "Sage": ["Arcana", "History"],
+  "Sailor": ["Athletics", "Perception"],
+  "Soldier": ["Athletics", "Intimidation"],
+  "Urchin": ["Sleight of Hand", "Stealth"],
+};
+
+const CLASS_HIT_DICE: Record<string, number> = {
+  Barbarian: 12, Fighter: 10, Paladin: 10, Ranger: 10,
+  Monk: 8, Rogue: 8, Cleric: 8, Druid: 8, Warlock: 8, Bard: 8,
+  Sorcerer: 6, Wizard: 6,
+};
+
+const ASI_LEVELS = new Set([4, 8, 12, 16, 19]);
+const ASI_STAT_KEYS = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"] as const;
+
 // ─── Edit Character Modal ───────────────────────────────────────────────────
 
 function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClose: () => void }) {
@@ -369,38 +394,53 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           </div>
         )}
 
-        {tab === "proficiencies" && (
-          <div className="space-y-4">
-            <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Saving Throws</div>
-              <div className="flex flex-wrap gap-2">
-                {EDIT_SAVING_THROWS.map(s => {
-                  const on = form.savingThrowProficiencies.includes(s);
-                  return (
-                    <button key={s} onClick={() => toggleSave(s)}
-                      className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
+        {tab === "proficiencies" && (() => {
+          const bgProfs = new Set(BACKGROUND_PROFICIENCIES[form.background] ?? []);
+          return (
+            <div className="space-y-4">
+              {bgProfs.size > 0 && (
+                <div className="flex items-center gap-2 p-2 rounded border border-primary/20 bg-primary/5">
+                  <span className="text-xs text-muted-foreground">Background ({form.background}):</span>
+                  {[...bgProfs].map(s => (
+                    <span key={s} className="px-2 py-0.5 rounded border border-primary/40 bg-primary/10 text-xs text-primary font-medium">
                       {s}
-                    </button>
-                  );
-                })}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Saving Throws</div>
+                <div className="flex flex-wrap gap-2">
+                  {EDIT_SAVING_THROWS.map(s => {
+                    const on = form.savingThrowProficiencies.includes(s);
+                    return (
+                      <button key={s} onClick={() => toggleSave(s)}
+                        className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Skill Proficiencies</div>
+                <div className="flex flex-wrap gap-2">
+                  {EDIT_ALL_SKILLS.map(s => {
+                    const on = form.skillProficiencies.includes(s);
+                    const fromBg = bgProfs.has(s);
+                    return (
+                      <button key={s} onClick={() => toggleSkill(s)}
+                        className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? fromBg ? "border-primary bg-primary/20 text-primary ring-1 ring-primary/30" : "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
+                        {s}{fromBg && on ? " ✦" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground/50 mt-2">✦ granted by background</p>
               </div>
             </div>
-            <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Skill Proficiencies</div>
-              <div className="flex flex-wrap gap-2">
-                {EDIT_ALL_SKILLS.map(s => {
-                  const on = form.skillProficiencies.includes(s);
-                  return (
-                    <button key={s} onClick={() => toggleSkill(s)}
-                      className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/40"}`}>
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {tab === "spells" && (() => {
           const pool = CLASS_SPELL_POOL[form.charClass] ?? {};
@@ -595,7 +635,7 @@ function HPBar({ hp, maxHp, tempHp, campaignId }: { hp: number; maxHp: number; t
 
 // ─── Character Panel ───────────────────────────────────────────────────────
 
-function CharacterPanel({ campaignId }: { campaignId: number }) {
+function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevelUp?: (info: { newLevel: number; hitDie: number }) => void }) {
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const { data: campaign } = useGetCampaign(campaignId, { query: { queryKey: getGetCampaignQueryKey(campaignId) } });
   const [editOpen, setEditOpen] = useState(false);
@@ -647,6 +687,13 @@ function CharacterPanel({ campaignId }: { campaignId: number }) {
         <div className="w-full bg-card border border-border rounded-full h-1.5 overflow-hidden">
           <div className="h-full bg-primary/60 rounded-full transition-all" style={{ width: `${xpPct}%` }} />
         </div>
+        {xp >= xpNext && lvl < 20 && (
+          <button
+            onClick={() => onLevelUp?.({ newLevel: lvl + 1, hitDie: CLASS_HIT_DICE[char.class] ?? 8 })}
+            className="w-full mt-1 py-1.5 rounded border border-primary/60 bg-primary/10 text-primary text-xs font-serif font-bold hover:bg-primary/20 transition-colors">
+            ✦ Level Up Available — Click to claim
+          </button>
+        )}
       </div>
 
       {/* HP + stats */}
@@ -861,8 +908,8 @@ const CLASS_SPELL_POOL: Record<string, SpellPool> = {
 
 // ─── Level-Up Modal ────────────────────────────────────────────────────────
 
-function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
-  newLevel: number; hitDie: number; campaignId: number; onClose: () => void;
+function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: {
+  newLevel: number; hitDie: number; campaignId: number; manualTrigger?: boolean; onClose: () => void;
 }) {
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const updateChar = useUpdateCharacter();
@@ -871,6 +918,7 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
   const [rolling, setRolling] = useState(false);
   const [newSpells, setNewSpells] = useState<string[]>([]);
   const [newCantrips, setNewCantrips] = useState<string[]>([]);
+  const [asiAlloc, setAsiAlloc] = useState<Partial<Record<typeof ASI_STAT_KEYS[number], number>>>({});
 
   if (!char) return null;
 
@@ -894,7 +942,20 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
   const spellsDone = newSpells.length === spellsNeeded;
   const cantripsDone = newCantrips.length === cantripsNeeded;
   const spellsReady = !spellGain || spellGain.isPrepared || (spellsDone && cantripsDone);
-  const canApply = hpGained !== null && spellsReady;
+  const isAsiLevel = ASI_LEVELS.has(newLevel);
+  const totalAsiPoints = Object.values(asiAlloc).reduce((a, b) => a + (b ?? 0), 0);
+  const asiDone = !isAsiLevel || totalAsiPoints === 2;
+  const canApply = hpGained !== null && spellsReady && asiDone;
+
+  function adjustAsi(stat: typeof ASI_STAT_KEYS[number], delta: number) {
+    setAsiAlloc(prev => {
+      const cur = prev[stat] ?? 0;
+      const newVal = Math.max(0, Math.min(2, cur + delta));
+      const newTotal = totalAsiPoints - cur + newVal;
+      if (newTotal > 2) return prev;
+      return { ...prev, [stat]: newVal };
+    });
+  }
 
   function toggleSpell(spell: string) {
     setNewSpells(prev =>
@@ -926,12 +987,25 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
     const newHp = Math.min(newMaxHp, (char!.hp ?? 10) + hpGained);
     const currentSpells = (char!.knownSpells as string[] | null) ?? [];
     const allNewSpells = [...newSpells, ...newCantrips];
+
+    const asiUpdates: Record<string, number> = {};
+    if (isAsiLevel && totalAsiPoints > 0) {
+      for (const stat of ASI_STAT_KEYS) {
+        const delta = asiAlloc[stat] ?? 0;
+        if (delta > 0) asiUpdates[stat] = ((char![stat] as number | null) ?? 10) + delta;
+      }
+    }
+
+    const newProfBonus = Math.floor((newLevel - 1) / 4) + 2;
     await updateChar.mutateAsync({
       campaignId,
       data: {
         maxHp: newMaxHp,
         hp: newHp,
         ...(allNewSpells.length > 0 ? { knownSpells: [...currentSpells, ...allNewSpells] } : {}),
+        ...asiUpdates,
+        // For manual triggers, server didn't handle level increment — we do it here
+        ...(manualTrigger ? { level: newLevel, proficiencyBonus: newProfBonus } : {}),
       },
     });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
@@ -1037,6 +1111,38 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
             </div>
           )}
 
+          {/* ASI — Ability Score Improvement */}
+          {isAsiLevel && (
+            <div className="bg-background/50 border border-primary/30 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-muted-foreground uppercase tracking-widest">Ability Score Improvement</div>
+                <span className={`text-xs font-bold ${totalAsiPoints === 2 ? "text-primary" : "text-amber-500"}`}>
+                  {totalAsiPoints} / 2 points
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/70 mb-3">Distribute +2 points among your ability scores (max +2 per stat).</p>
+              <div className="grid grid-cols-3 gap-2">
+                {ASI_STAT_KEYS.map(stat => {
+                  const current = (char[stat] as number | null) ?? 10;
+                  const alloc = asiAlloc[stat] ?? 0;
+                  const statLabel = stat.slice(0, 3).toUpperCase();
+                  return (
+                    <div key={stat} className="flex flex-col items-center gap-1 bg-card border border-border rounded p-2">
+                      <div className="text-xs text-muted-foreground">{statLabel}</div>
+                      <div className="font-bold text-foreground text-sm">{current}{alloc > 0 ? <span className="text-primary text-xs">+{alloc}</span> : ""}</div>
+                      <div className="flex gap-1">
+                        <button onClick={() => adjustAsi(stat, -1)} disabled={alloc === 0}
+                          className="w-5 h-5 rounded border border-border text-xs text-muted-foreground hover:text-foreground disabled:opacity-30">−</button>
+                        <button onClick={() => adjustAsi(stat, 1)} disabled={totalAsiPoints >= 2 || alloc >= 2 || current + alloc >= 20}
+                          className="w-5 h-5 rounded border border-border text-xs text-muted-foreground hover:text-foreground disabled:opacity-30">+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-background/50 border border-border/60 rounded-lg p-4">
             <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Hit Points</div>
             <div className="text-xs text-muted-foreground mb-3">
@@ -1077,6 +1183,11 @@ function LevelUpModal({ newLevel, hitDie, campaignId, onClose }: {
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-serif text-base">
             {updateChar.isPending ? "Applying…" : "Apply Level Up"}
           </Button>
+          {isAsiLevel && !asiDone && (
+            <p className="text-xs text-amber-500 text-center">
+              Distribute all 2 ability score points to continue.
+            </p>
+          )}
           {spellGain && !spellGain.isPrepared && !spellsReady && (
             <p className="text-xs text-amber-500 text-center">
               Choose your {!cantripsDone ? `${cantripsNeeded - newCantrips.length} cantrip${cantripsNeeded - newCantrips.length > 1 ? "s" : ""}` : ""}
@@ -1234,7 +1345,7 @@ function EditItemDialog({ item, campaignId, onClose }: {
     itemType: item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc",
     quantity: item.quantity,
     notes: item.description ?? "",
-    armorType: (props.armorType ?? "") as "" | "light" | "medium" | "heavy" | "shield",
+    armorType: (props.armorType ?? "none") as "none" | "light" | "medium" | "heavy" | "shield",
     acBase: props.acBase?.toString() ?? "",
     stealthDisadvantage: props.stealthDisadvantage ?? false,
     damage: props.damage ?? "",
@@ -1252,9 +1363,9 @@ function EditItemDialog({ item, campaignId, onClose }: {
 
   async function handleSave() {
     const itemProperties: ItemProps | null = (() => {
-      if (form.itemType === "armor" && form.armorType) {
+      if (form.itemType === "armor" && form.armorType !== "none") {
         return {
-          armorType: form.armorType,
+          armorType: form.armorType as "light" | "medium" | "heavy" | "shield",
           acBase: form.acBase ? parseInt(form.acBase) : undefined,
           stealthDisadvantage: form.stealthDisadvantage || undefined,
           ...(form.tags.length > 0 ? { weaponProperties: form.tags } : {}),
@@ -1308,7 +1419,7 @@ function EditItemDialog({ item, campaignId, onClose }: {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Type</Label>
-              <Select value={form.itemType} onValueChange={v => setForm(f => ({ ...f, itemType: v as typeof f.itemType, armorType: "", acBase: "", damage: "", damageType: "" }))}>
+              <Select value={form.itemType} onValueChange={v => setForm(f => ({ ...f, itemType: v as typeof f.itemType, armorType: "none", acBase: "", damage: "", damageType: "" }))}>
                 <SelectTrigger className="h-8 text-sm bg-background border-border text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-card border-border text-foreground">
                   {["weapon", "armor", "consumable", "tool", "treasure", "misc"].map(t => (
@@ -1359,12 +1470,12 @@ function EditItemDialog({ item, campaignId, onClose }: {
                   <Select value={form.armorType} onValueChange={v => setForm(f => ({ ...f, armorType: v as typeof f.armorType }))}>
                     <SelectTrigger className="h-7 text-xs bg-background border-border text-foreground"><SelectValue placeholder="None" /></SelectTrigger>
                     <SelectContent className="bg-card border-border text-foreground">
-                      <SelectItem value="">No stats</SelectItem>
+                      <SelectItem value="none">No stats</SelectItem>
                       {["light", "medium", "heavy", "shield"].map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                {form.armorType && form.armorType !== "shield" && (
+                {form.armorType !== "none" && form.armorType !== "shield" && (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">AC Base</Label>
                     <Input type="number" value={form.acBase} onChange={e => setForm(f => ({ ...f, acBase: e.target.value }))}
@@ -1555,7 +1666,7 @@ export default function GameView() {
   const [pendingRolls, setPendingRolls] = useState<DiceRoll[]>([]);
   const [showDice, setShowDice] = useState(false);
   const [mobileTab, setMobileTab] = useState<"character" | "chat" | "sidebar">("chat");
-  const [pendingLevelUp, setPendingLevelUp] = useState<{ newLevel: number; hitDie: number } | null>(null);
+  const [pendingLevelUp, setPendingLevelUp] = useState<{ newLevel: number; hitDie: number; manual?: boolean } | null>(null);
   const [pendingRollPrompt, setPendingRollPrompt] = useState<{ dice: string; reason: string; dc?: number } | null>(null);
   const [pendingLootOffer, setPendingLootOffer] = useState<Array<{ name: string; itemType: string; quantity?: number; description?: string }> | null>(null);
   type EditableItem = { id: number; name: string; itemType: string; quantity: number; description: string | null; isEquipped: boolean; itemProperties: unknown };
@@ -1729,7 +1840,7 @@ export default function GameView() {
       <div className="flex-1 overflow-hidden flex">
         {/* LEFT: Character */}
         <div className={`w-64 xl:w-72 flex-shrink-0 border-r border-border ${mobileTab === "character" ? "block" : "hidden"} lg:block`}>
-          <CharacterPanel campaignId={campaignId} />
+          <CharacterPanel campaignId={campaignId} onLevelUp={info => setPendingLevelUp({ ...info, manual: true })} />
         </div>
 
         {/* CENTER: Chat */}
@@ -1871,6 +1982,7 @@ export default function GameView() {
           newLevel={pendingLevelUp.newLevel}
           hitDie={pendingLevelUp.hitDie}
           campaignId={campaignId}
+          manualTrigger={pendingLevelUp.manual}
           onClose={() => setPendingLevelUp(null)}
         />
       )}
