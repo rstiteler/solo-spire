@@ -640,6 +640,28 @@ components:
             ac:
               type: integer
           required: [type, hp, maxHp, ac]
+        companion:
+          type: object
+          nullable: true
+          properties:
+            mode:
+              type: string
+            primalType:
+              type: string
+              nullable: true
+            name:
+              type: string
+            hp:
+              type: integer
+            maxHp:
+              type: integer
+            ac:
+              type: integer
+            attackBonus:
+              type: integer
+            damage:
+              type: string
+          required: [mode, name, hp, maxHp, ac, attackBonus, damage]
         portraitUrl:
           type: string
           nullable: true
@@ -775,6 +797,28 @@ components:
             ac:
               type: integer
           required: [type, hp, maxHp, ac]
+        companion:
+          type: object
+          nullable: true
+          properties:
+            mode:
+              type: string
+            primalType:
+              type: string
+              nullable: true
+            name:
+              type: string
+            hp:
+              type: integer
+            maxHp:
+              type: integer
+            ac:
+              type: integer
+            attackBonus:
+              type: integer
+            damage:
+              type: string
+          required: [mode, name, hp, maxHp, ac, attackBonus, damage]
         portraitUrl:
           type: string
           nullable: true

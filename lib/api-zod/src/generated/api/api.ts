@@ -100,6 +100,18 @@ export const GetCampaignResponse = zod
               ac: zod.number(),
             })
             .nullish(),
+          companion: zod
+            .object({
+              mode: zod.string(),
+              primalType: zod.string().nullish(),
+              name: zod.string(),
+              hp: zod.number(),
+              maxHp: zod.number(),
+              ac: zod.number(),
+              attackBonus: zod.number(),
+              damage: zod.string(),
+            })
+            .nullish(),
           portraitUrl: zod.string().nullish(),
           portraitDescription: zod.string().nullish(),
           deathSaves: zod.object({}).passthrough().nullish(),
@@ -257,6 +269,18 @@ export const SaveCampaignBody = zod.object({
           ac: zod.number(),
         })
         .nullish(),
+      companion: zod
+        .object({
+          mode: zod.string(),
+          primalType: zod.string().nullish(),
+          name: zod.string(),
+          hp: zod.number(),
+          maxHp: zod.number(),
+          ac: zod.number(),
+          attackBonus: zod.number(),
+          damage: zod.string(),
+        })
+        .nullish(),
       portraitUrl: zod.string().nullish(),
       portraitDescription: zod.string().nullish(),
       deathSaves: zod.object({}).passthrough().nullish(),
@@ -375,6 +399,18 @@ export const GetCharacterResponse = zod.object({
       ac: zod.number(),
     })
     .nullish(),
+  companion: zod
+    .object({
+      mode: zod.string(),
+      primalType: zod.string().nullish(),
+      name: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+      attackBonus: zod.number(),
+      damage: zod.string(),
+    })
+    .nullish(),
   portraitUrl: zod.string().nullish(),
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
@@ -427,6 +463,18 @@ export const UpdateCharacterBody = zod.object({
       ac: zod.number(),
     })
     .nullish(),
+  companion: zod
+    .object({
+      mode: zod.string(),
+      primalType: zod.string().nullish(),
+      name: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+      attackBonus: zod.number(),
+      damage: zod.string(),
+    })
+    .nullish(),
   portraitUrl: zod.string().nullish(),
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
@@ -470,6 +518,18 @@ export const UpdateCharacterResponse = zod.object({
       hp: zod.number(),
       maxHp: zod.number(),
       ac: zod.number(),
+    })
+    .nullish(),
+  companion: zod
+    .object({
+      mode: zod.string(),
+      primalType: zod.string().nullish(),
+      name: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+      attackBonus: zod.number(),
+      damage: zod.string(),
     })
     .nullish(),
   portraitUrl: zod.string().nullish(),

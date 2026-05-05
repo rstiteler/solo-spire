@@ -125,13 +125,21 @@ router.post("/campaigns/:id/save", async (req, res) => {
     if (characterUpdates && Object.keys(characterUpdates).length > 0) {
       const charBody = UpdateCharacterBody.safeParse(characterUpdates);
       if (charBody.success) {
-        const { spellSlots, spellSlotsUsed, deathSaves, ...charRest } = charBody.data;
+        type CompanionSet = { mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null;
+        const castCompanion = (c: typeof charBody.data.companion): CompanionSet => {
+          if (!c) return null;
+          const { primalType, ...cr } = c;
+          return { ...cr, ...(primalType != null ? { primalType } : {}) };
+        };
+        const { spellSlots, spellSlotsUsed, deathSaves, familiar, companion, ...charRest } = charBody.data;
         await db.update(characters)
           .set({
             ...charRest,
             spellSlots: spellSlots as Record<string, number> | undefined,
             spellSlotsUsed: spellSlotsUsed as Record<string, number> | undefined,
             deathSaves: deathSaves as { successes: number; failures: number } | undefined,
+            ...(familiar !== undefined ? { familiar: familiar as { type: string; hp: number; maxHp: number; ac: number } | null } : {}),
+            ...(companion !== undefined ? { companion: castCompanion(companion) } : {}),
             updatedAt: new Date(),
           })
           .where(eq(characters.campaignId, paramsParsed.data.id));

@@ -46,6 +46,8 @@ A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anth
 9. **Multi-user** — Each user sees only their own campaigns; all routes enforce auth
 10. **Level-Up Modal** — HP roll/average, spell learning, ASI (+2 points at levels 4/8/12/16/19), Warlock Pact Boon + Invocations
 11. **Warlock Mechanics** — Pact Boon (Chain/Blade/Tome) at level 3; Eldritch Invocations at levels 2/5/7/9/12/15/18 (+35 invocations with prereq filtering); Pact of the Chain familiar selection (Imp/Pseudodragon/Quasit/Sprite + 5 standard familiars) with HP bar, adjust controls, dismiss button, and Chain invocation display in CharacterPanel
+12. **Beastmaster Ranger Companion** — Tasha's Primal Beast (Beast of the Land/Sea/Sky with scaling HP/AC/attack formulas) or PHB Beast (12 CR ≤ 1/4 beasts with fixed stat blocks); companion card in CharacterPanel with HP bar, ±1/±5 controls, Recalculate Stats (level-up detection), Release button, and primal special ability display
+13. **Find Familiar (non-Warlock)** — Casters with Find Familiar spell can select from 15 PHB familiar forms; familiar card in CharacterPanel with HP bar and adjust controls
 
 ## Database Schema
 

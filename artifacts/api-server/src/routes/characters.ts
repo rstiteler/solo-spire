@@ -49,7 +49,14 @@ router.put("/campaigns/:campaignId/character", async (req, res) => {
     const [existing] = await db.select().from(characters).where(eq(characters.campaignId, paramsParsed.data.campaignId));
 
     if (existing) {
-      const { spellSlots, spellSlotsUsed, deathSaves, familiar, ...rest } = bodyParsed.data;
+      type CompanionInsert = { mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null;
+      const castCompanion = (c: typeof bodyParsed.data.companion): CompanionInsert => {
+        if (!c) return null;
+        const { primalType, ...rest2 } = c;
+        return { ...rest2, ...(primalType != null ? { primalType } : {}) };
+      };
+
+      const { spellSlots, spellSlotsUsed, deathSaves, familiar, companion, ...rest } = bodyParsed.data;
       const [updated] = await db.update(characters)
         .set({
           ...rest,
@@ -57,23 +64,31 @@ router.put("/campaigns/:campaignId/character", async (req, res) => {
           spellSlotsUsed: spellSlotsUsed as Record<string, number> | undefined,
           deathSaves: deathSaves as { successes: number; failures: number } | undefined,
           ...(familiar !== undefined ? { familiar: familiar as { type: string; hp: number; maxHp: number; ac: number } | null } : {}),
+          ...(companion !== undefined ? { companion: castCompanion(companion) } : {}),
           updatedAt: new Date(),
         })
         .where(eq(characters.campaignId, paramsParsed.data.campaignId))
         .returning();
       res.json(updated);
     } else {
-      const data = bodyParsed.data;
+      const { companion: companionRaw, spellSlots: iSpellSlots, spellSlotsUsed: iSpellSlotsUsed, deathSaves: iDeathSaves, ...restData } = bodyParsed.data;
+      type CompanionInsert = { mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null;
+      const castCompanion2 = (c: typeof companionRaw): CompanionInsert => {
+        if (!c) return null;
+        const { primalType, ...cr } = c;
+        return { ...cr, ...(primalType != null ? { primalType } : {}) };
+      };
       const [created] = await db.insert(characters).values({
         campaignId: paramsParsed.data.campaignId,
-        name: data.name ?? "Unknown Hero",
-        race: data.race ?? "Human",
-        class: data.class ?? "Fighter",
-        background: data.background ?? "Folk Hero",
-        ...data,
-        spellSlots: data.spellSlots as Record<string, number> | undefined,
-        spellSlotsUsed: data.spellSlotsUsed as Record<string, number> | undefined,
-        deathSaves: data.deathSaves as { successes: number; failures: number } | undefined,
+        name: restData.name ?? "Unknown Hero",
+        race: restData.race ?? "Human",
+        class: restData.class ?? "Fighter",
+        background: restData.background ?? "Folk Hero",
+        ...restData,
+        spellSlots: iSpellSlots as Record<string, number> | undefined,
+        spellSlotsUsed: iSpellSlotsUsed as Record<string, number> | undefined,
+        deathSaves: iDeathSaves as { successes: number; failures: number } | undefined,
+        ...(companionRaw !== undefined ? { companion: castCompanion2(companionRaw) } : {}),
       }).returning();
       res.json(created);
     }

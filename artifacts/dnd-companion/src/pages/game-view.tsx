@@ -248,16 +248,80 @@ const PACT_BOON_OPTIONS = [
 ];
 
 type FamiliarOption = { name: string; hp: number; maxHp: number; ac: number; description: string; special?: boolean };
+const STANDARD_FAMILIAR_TYPES: FamiliarOption[] = [
+  { name: "Bat", hp: 1, maxHp: 1, ac: 12, description: "Blindsight 60 ft (blind beyond). Echolocation lets it detect in total darkness." },
+  { name: "Cat", hp: 2, maxHp: 2, ac: 12, description: "Keen Smell; advantage on Perception checks. Stealthy and silent scout." },
+  { name: "Crab", hp: 2, maxHp: 2, ac: 11, description: "Amphibious. Claw can grapple a creature (escape DC 9)." },
+  { name: "Frog", hp: 1, maxHp: 1, ac: 11, description: "Amphibious. Tremorsense 30 ft detects movement on the ground." },
+  { name: "Hawk", hp: 1, maxHp: 1, ac: 13, description: "Keen Sight; advantage on Perception. Excellent aerial scout." },
+  { name: "Lizard", hp: 2, maxHp: 2, ac: 10, description: "Climbs sheer surfaces with ease. Squeezes through very tight spaces." },
+  { name: "Octopus", hp: 3, maxHp: 3, ac: 12, description: "Ink Cloud for escape. Can grapple a creature in water (DC 10)." },
+  { name: "Owl", hp: 1, maxHp: 1, ac: 11, description: "Flyby (no opportunity attacks). Darkvision 120 ft. Keen Hearing & Sight." },
+  { name: "Poisonous Snake", hp: 2, maxHp: 2, ac: 13, description: "Bite: DC 10 CON save or 2d4 poison damage. Good for delivering poison." },
+  { name: "Quipper", hp: 1, maxHp: 1, ac: 13, description: "Aquatic only. Blood Frenzy: advantage on melee attacks vs a damaged creature." },
+  { name: "Rat", hp: 1, maxHp: 1, ac: 10, description: "Pack Tactics. Tiny and easy to conceal. Keen Smell." },
+  { name: "Raven", hp: 1, maxHp: 1, ac: 12, description: "Mimicry: mimics sounds and voices (DC 10 Insight to detect). Can relay messages." },
+  { name: "Sea Horse", hp: 1, maxHp: 1, ac: 11, description: "Aquatic only. Useful in underwater exploration campaigns." },
+  { name: "Spider", hp: 1, maxHp: 1, ac: 12, description: "Web Sense detects creatures in contact with web. Climbs ceilings." },
+  { name: "Weasel", hp: 1, maxHp: 1, ac: 13, description: "Keen Hearing & Smell. Advantage on Perception using smell." },
+];
+
 const CHAIN_FAMILIAR_TYPES: FamiliarOption[] = [
   { name: "Imp", hp: 10, maxHp: 10, ac: 13, description: "Devil from the Nine Hells. Immune to fire/poison, resistant to cold/lightning/bludgeoning.", special: true },
   { name: "Pseudodragon", hp: 7, maxHp: 7, ac: 13, description: "Tiny dragon with telepathy. Can share its magical senses with you.", special: true },
   { name: "Quasit", hp: 7, maxHp: 7, ac: 13, description: "Chaotic demon that can turn invisible at will. Immune to poison.", special: true },
   { name: "Sprite", hp: 2, maxHp: 2, ac: 15, description: "Fey archer with a heart-seeking bow. Can detect alignment and current emotional state.", special: true },
-  { name: "Cat", hp: 2, maxHp: 2, ac: 12, description: "Stealthy and perceptive, ideal for scouting." },
-  { name: "Owl", hp: 1, maxHp: 1, ac: 11, description: "Fly-by assistance and superior night vision." },
-  { name: "Raven", hp: 1, maxHp: 1, ac: 12, description: "Mimics sounds and voices. Useful for distraction and communication." },
-  { name: "Bat", hp: 1, maxHp: 1, ac: 12, description: "Blindsight via echolocation in total darkness." },
-  { name: "Hawk", hp: 1, maxHp: 1, ac: 13, description: "Keen Sight advantage on Perception, excellent for aerial scouting." },
+  ...STANDARD_FAMILIAR_TYPES,
+];
+
+type BeastOption = { name: string; cr: string; hp: number; ac: number; speed: string; attack: string; attackBonus: number; damage: string; notes: string };
+const BEASTMASTER_PHB_BEASTS: BeastOption[] = [
+  { name: "Wolf", cr: "1/4", hp: 11, ac: 13, speed: "40 ft", attack: "Bite", attackBonus: 4, damage: "2d4+2 piercing", notes: "Pack Tactics. Bite: DC 11 STR save or knocked prone." },
+  { name: "Panther", cr: "1/4", hp: 13, ac: 12, speed: "50 ft, climb 40 ft", attack: "Bite", attackBonus: 4, damage: "1d6+2 piercing", notes: "Pounce: DC 12 STR save or prone + free claw attack (1d4+2)." },
+  { name: "Axe Beak", cr: "1/4", hp: 19, ac: 11, speed: "50 ft", attack: "Beak", attackBonus: 4, damage: "1d8+2 slashing", notes: "Highest HP of the standard CR 1/4 options. Great for mounted combat." },
+  { name: "Boar", cr: "1/4", hp: 11, ac: 11, speed: "40 ft", attack: "Tusk", attackBonus: 3, damage: "2d6+1 slashing", notes: "Charge: extra 2d6 + DC 11 STR save or knocked prone." },
+  { name: "Giant Badger", cr: "1/4", hp: 13, ac: 10, speed: "30 ft, burrow 10 ft", attack: "Bite", attackBonus: 3, damage: "1d6+1 piercing", notes: "Claws +3, 2d4+1. Burrow speed for terrain advantage." },
+  { name: "Giant Lizard", cr: "1/4", hp: 19, ac: 12, speed: "30 ft, climb 30 ft", attack: "Bite", attackBonus: 4, damage: "2d6+2 piercing", notes: "High HP and damage. Climb speed 30 ft for vertical terrain." },
+  { name: "Constrictor Snake", cr: "1/4", hp: 13, ac: 12, speed: "30 ft, swim 30 ft", attack: "Bite", attackBonus: 4, damage: "1d6+2 piercing", notes: "Constrict: +4 to hit, 1d8+2 + grappled (DC 14 STR to escape)." },
+  { name: "Pteranodon", cr: "1/4", hp: 13, ac: 13, speed: "10 ft, fly 60 ft", attack: "Bite", attackBonus: 3, damage: "2d4+1 piercing", notes: "Flyby. Fly speed 60 ft — aerial support and scouting." },
+  { name: "Blood Hawk", cr: "1/8", hp: 7, ac: 13, speed: "fly 60 ft", attack: "Beak", attackBonus: 4, damage: "1d4+2 piercing", notes: "Flyby. Pack Tactics. Fast flier for scouting and distraction." },
+  { name: "Giant Weasel", cr: "1/8", hp: 9, ac: 13, speed: "40 ft", attack: "Bite", attackBonus: 4, damage: "2d4+2 piercing", notes: "Keen Hearing & Smell (adv. Perception). Good all-rounder." },
+  { name: "Flying Snake", cr: "1/8", hp: 5, ac: 14, speed: "30 ft, fly 60 ft, swim 30 ft", attack: "Bite", attackBonus: 6, damage: "1+3 piercing, 3d4 poison", notes: "Highest AC for a CR 1/8. Flyby. Venomous bite." },
+  { name: "Mastiff", cr: "1/8", hp: 5, ac: 12, speed: "40 ft", attack: "Bite", attackBonus: 3, damage: "1d6+1 piercing", notes: "Bite: DC 11 STR save or knocked prone. Reliable crowd control." },
+];
+
+type PrimalBeastEntry = { name: string; primalType: "Land" | "Sea" | "Sky"; description: string; speed: string; attack: string; special: string; baseStr: number; baseDex: number; baseCon: number; abilityKey: "str" | "dex"; hpFormula: (level: number) => number; acFormula: (profBonus: number) => number; damageFormula: (profBonus: number, abilityBonus: number) => string };
+const PRIMAL_BEAST_DATA: PrimalBeastEntry[] = [
+  {
+    name: "Beast of the Land", primalType: "Land",
+    description: "A Medium beast that can burrow and climb. Charge knocks enemies prone.",
+    speed: "40 ft, burrow 15 ft, climb 15 ft", attack: "Maul",
+    special: "Charge: moves 20ft+ toward target, DC (8 + prof + STR mod) STR save or knocked prone + 1d6 extra bludgeoning.",
+    baseStr: 14, baseDex: 14, baseCon: 15, abilityKey: "str",
+    hpFormula: (level) => 5 * level + 2,
+    acFormula: (prof) => 13 + prof,
+    damageFormula: (prof, ab) => `1d8+${ab + prof} bludgeoning`,
+  },
+  {
+    name: "Beast of the Sea", primalType: "Sea",
+    description: "A Medium aquatic beast with a 60-ft swim speed. Binding Strike restrains enemies.",
+    speed: "5 ft, swim 60 ft", attack: "Binding Strike",
+    special: "On hit: target is grappled (escape DC = 8 + prof + STR/DEX mod). Grappled speed becomes 0.",
+    baseStr: 14, baseDex: 14, baseCon: 15, abilityKey: "str",
+    hpFormula: (level) => 5 * level + 2,
+    acFormula: (prof) => 13 + prof,
+    damageFormula: (prof, ab) => `1d6+${ab + prof} piercing/bludgeoning`,
+  },
+  {
+    name: "Beast of the Sky", primalType: "Sky",
+    description: "A Small flying beast with Flyby. Shred deals slashing damage.",
+    speed: "10 ft, fly 60 ft", attack: "Shred",
+    special: "Flyby: doesn't provoke opportunity attacks when it flies out of reach.",
+    baseStr: 6, baseDex: 16, baseCon: 13, abilityKey: "dex",
+    hpFormula: (level) => 4 * level + 1,
+    acFormula: (prof) => 13 + prof,
+    damageFormula: (prof, ab) => `1d4+${ab + prof} slashing`,
+  },
 ];
 
 // ─── Edit Character Modal ───────────────────────────────────────────────────
@@ -268,7 +332,7 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities" | "warlock">("identity");
+  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities" | "warlock" | "ranger" | "familiar">("identity");
   const [saving, setSaving] = useState(false);
   const [knownSpellsList, setKnownSpellsList] = useState<string[]>(() => (char?.knownSpells as string[] | null) ?? []);
   const [spellSearch, setSpellSearch] = useState("");
@@ -276,6 +340,11 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
   const [warlockPactBoon, setWarlockPactBoon] = useState<string | null>(() => (char?.pactBoon as string | null) ?? null);
   const [warlockFamiliarType, setWarlockFamiliarType] = useState<string | null>(() => (char?.familiar as { type: string } | null)?.type ?? null);
   const [warlockInvocations, setWarlockInvocations] = useState<string[]>(() => (char?.invocations as string[] | null) ?? []);
+  const existingCompanion = char?.companion as { mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null | undefined;
+  const [rangerMode, setRangerMode] = useState<"primal" | "beast">(() => (existingCompanion?.mode as "primal" | "beast") ?? "primal");
+  const [rangerPrimalType, setRangerPrimalType] = useState<"Land" | "Sea" | "Sky" | null>(() => (existingCompanion?.primalType as "Land" | "Sea" | "Sky") ?? null);
+  const [rangerBeastName, setRangerBeastName] = useState<string | null>(() => existingCompanion?.mode === "beast" ? existingCompanion.name : null);
+  const [ffFamiliarType, setFfFamiliarType] = useState<string | null>(() => (char?.class as string) !== "Warlock" ? (char?.familiar as { type: string } | null)?.type ?? null : null);
 
   const [form, setForm] = useState(() => {
     const features = (char?.features as string[] | null) ?? [];
@@ -332,15 +401,49 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
     setSaving(true);
     try {
       const isWarlock = form.charClass === "Warlock";
+      const isRanger = form.charClass === "Ranger";
+      const charLevel = char?.level ?? 1;
+      const charProfBonus = char?.proficiencyBonus ?? 2;
+
       const familiarData = isWarlock && warlockPactBoon === "Pact of the Chain" && warlockFamiliarType
         ? (() => {
             const existing = char?.familiar as { type: string; hp: number; maxHp: number; ac: number } | null;
-            // Keep current HP/maxHP if same familiar type, otherwise use base stats
             if (existing && existing.type === warlockFamiliarType) return existing;
             const base = CHAIN_FAMILIAR_TYPES.find(f => f.name === warlockFamiliarType);
             return base ? { type: base.name, hp: base.maxHp, maxHp: base.maxHp, ac: base.ac } : null;
           })()
         : null;
+
+      const ffFamiliarData = !isWarlock && ffFamiliarType !== null
+        ? (() => {
+            const existing = char?.familiar as { type: string; hp: number; maxHp: number; ac: number } | null;
+            if (existing && existing.type === ffFamiliarType) return existing;
+            const base = STANDARD_FAMILIAR_TYPES.find(f => f.name === ffFamiliarType);
+            return base ? { type: base.name, hp: base.maxHp, maxHp: base.maxHp, ac: base.ac } : null;
+          })()
+        : undefined;
+
+      const companionData = isRanger && charLevel >= 3
+        ? (() => {
+            if (rangerMode === "primal" && rangerPrimalType) {
+              const entry = PRIMAL_BEAST_DATA.find(b => b.primalType === rangerPrimalType);
+              if (!entry) return undefined;
+              const ab = abilityMod(entry.abilityKey === "str" ? entry.baseStr : entry.baseDex);
+              const maxHp = entry.hpFormula(charLevel);
+              const ac = entry.acFormula(charProfBonus);
+              const attackBonus = charProfBonus + ab;
+              const damage = entry.damageFormula(charProfBonus, ab);
+              const currentHp = existingCompanion?.primalType === rangerPrimalType ? existingCompanion.hp : maxHp;
+              return { mode: "primal", name: entry.name, primalType: entry.primalType, hp: currentHp, maxHp, ac, attackBonus, damage };
+            } else if (rangerMode === "beast" && rangerBeastName) {
+              const beast = BEASTMASTER_PHB_BEASTS.find(b => b.name === rangerBeastName);
+              if (!beast) return undefined;
+              const currentHp = existingCompanion?.name === rangerBeastName ? existingCompanion.hp : beast.hp;
+              return { mode: "beast", name: beast.name, primalType: undefined, hp: currentHp, maxHp: beast.hp, ac: beast.ac, attackBonus: beast.attackBonus, damage: beast.damage };
+            }
+            return existingCompanion ?? undefined;
+          })()
+        : undefined;
 
       await updateCharacter.mutateAsync({
         campaignId,
@@ -365,11 +468,9 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           savingThrowProficiencies: form.savingThrowProficiencies,
           features: form.subclass ? [form.subclass] : [],
           knownSpells: knownSpellsList,
-          ...(isWarlock ? {
-            pactBoon: warlockPactBoon,
-            invocations: warlockInvocations,
-            familiar: familiarData,
-          } : {}),
+          ...(isWarlock ? { pactBoon: warlockPactBoon, invocations: warlockInvocations, familiar: familiarData } : {}),
+          ...(ffFamiliarData !== undefined ? { familiar: ffFamiliarData } : {}),
+          ...(companionData !== undefined ? { companion: companionData } : {}),
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
@@ -415,6 +516,18 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
             <button onClick={() => setTab("warlock")}
               className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${tab === "warlock" ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"} ${!warlockPactBoon && (char?.level ?? 1) >= 3 ? "ring-1 ring-amber-500/50" : ""}`}>
               Warlock {!warlockPactBoon && (char?.level ?? 1) >= 3 ? "⚠" : ""}
+            </button>
+          )}
+          {form.charClass === "Ranger" && (char?.level ?? 1) >= 3 && (
+            <button onClick={() => setTab("ranger")}
+              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${tab === "ranger" ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"} ${!existingCompanion ? "ring-1 ring-amber-500/50" : ""}`}>
+              Ranger {!existingCompanion ? "⚠" : ""}
+            </button>
+          )}
+          {form.charClass !== "Warlock" && knownSpellsList.includes("Find Familiar") && (
+            <button onClick={() => setTab("familiar")}
+              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${tab === "familiar" ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
+              Familiar
             </button>
           )}
         </div>
@@ -774,6 +887,109 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           );
         })()}
 
+        {tab === "ranger" && (() => {
+          const charLevel = char?.level ?? 1;
+          const charProfBonus = char?.proficiencyBonus ?? 2;
+          const calcPrimal = (entry: PrimalBeastEntry) => {
+            const ab = abilityMod(entry.abilityKey === "str" ? entry.baseStr : entry.baseDex);
+            return { maxHp: entry.hpFormula(charLevel), ac: entry.acFormula(charProfBonus), attackBonus: charProfBonus + ab, damage: entry.damageFormula(charProfBonus, ab) };
+          };
+          return (
+            <div className="space-y-4">
+              {/* Mode selector */}
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Companion Rules</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["primal", "beast"] as const).map(m => (
+                    <button key={m} onClick={() => setRangerMode(m)}
+                      className={`rounded border p-2 text-xs font-medium transition-all ${rangerMode === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}>
+                      {m === "primal" ? "Tasha's Primal (TCoE)" : "PHB Beast"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {rangerMode === "primal" && (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Primal Companion</div>
+                  {PRIMAL_BEAST_DATA.map(entry => {
+                    const sel = rangerPrimalType === entry.primalType;
+                    const stats = calcPrimal(entry);
+                    return (
+                      <button key={entry.primalType} onClick={() => setRangerPrimalType(entry.primalType)}
+                        className={`w-full text-left rounded border p-2.5 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{entry.name}</span>
+                          <span className="text-xs text-muted-foreground">HP {stats.maxHp} · AC {stats.ac} · +{stats.attackBonus} {entry.attack}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground/70 leading-snug">{entry.description}</p>
+                        <div className="flex flex-wrap gap-x-3 mt-1">
+                          <span className="text-xs text-muted-foreground/60">Speed: {entry.speed}</span>
+                          <span className="text-xs text-muted-foreground/60">Damage: {stats.damage}</span>
+                        </div>
+                        <p className="text-xs text-primary/60 mt-1 leading-snug italic">{entry.special}</p>
+                      </button>
+                    );
+                  })}
+                  <p className="text-xs text-muted-foreground/50 italic">HP and AC scale with ranger level and proficiency bonus. Use <strong>Recalculate Stats</strong> in the character sheet after leveling up.</p>
+                </div>
+              )}
+
+              {rangerMode === "beast" && (
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">PHB Beast (CR ≤ 1/4)</div>
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                    {BEASTMASTER_PHB_BEASTS.map(beast => {
+                      const sel = rangerBeastName === beast.name;
+                      return (
+                        <button key={beast.name} onClick={() => setRangerBeastName(beast.name)}
+                          className={`w-full text-left rounded border p-2.5 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{beast.name}</span>
+                              <span className="text-xs text-muted-foreground/50">CR {beast.cr}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">HP {beast.hp} · AC {beast.ac}</span>
+                          </div>
+                          <div className="text-xs text-primary/70">{beast.attack} +{beast.attackBonus} · {beast.damage} · {beast.speed}</div>
+                          <p className="text-xs text-muted-foreground/60 mt-0.5 leading-snug">{beast.notes}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground/50 italic">PHB companions use a fixed stat block. Adjust HP in the character sheet after taking damage.</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {tab === "familiar" && (
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Find Familiar</div>
+            <p className="text-xs text-muted-foreground/70 leading-snug">Choose the form your familiar currently takes. Changing forms is possible each time you cast Find Familiar (1 hour ritual). Current HP resets only when you pick a different form.</p>
+            <div className="space-y-1.5 max-h-80 overflow-y-auto">
+              <button onClick={() => setFfFamiliarType(null)}
+                className={`w-full text-left rounded border p-2 transition-all ${ffFamiliarType === null ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}>
+                <span className="text-xs font-medium">No familiar (dismissed / not yet summoned)</span>
+              </button>
+              {STANDARD_FAMILIAR_TYPES.map(f => {
+                const sel = ffFamiliarType === f.name;
+                return (
+                  <button key={f.name} onClick={() => setFfFamiliarType(f.name)}
+                    className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${sel ? "text-primary" : "text-foreground"}`}>{f.name}</span>
+                      <span className="text-xs text-muted-foreground">HP {f.maxHp} · AC {f.ac}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{f.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="pt-2 border-t border-border">
           <Button variant="outline" onClick={onClose} className="border-border text-muted-foreground hover:text-foreground">Cancel</Button>
           <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90 font-serif">
@@ -895,6 +1111,19 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const chainInvocations = invocations
     .map(name => ELDRITCH_INVOCATIONS.find(inv => inv.name === name))
     .filter((inv): inv is Invocation => !!inv && !!inv.chainApplies);
+  const companion = char.companion as { mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null | undefined;
+  const primalEntry = companion?.mode === "primal" && companion.primalType
+    ? PRIMAL_BEAST_DATA.find(b => b.primalType === companion.primalType) ?? null
+    : null;
+  const companionMaxHp = primalEntry ? primalEntry.hpFormula(char.level ?? 1) : (companion?.maxHp ?? 0);
+  const companionAc = primalEntry ? primalEntry.acFormula(char.proficiencyBonus ?? 2) : (companion?.ac ?? 0);
+  const companionAttackBonus = primalEntry
+    ? (char.proficiencyBonus ?? 2) + abilityMod(primalEntry.abilityKey === "str" ? primalEntry.baseStr : primalEntry.baseDex)
+    : (companion?.attackBonus ?? 0);
+  const companionDamage = primalEntry
+    ? primalEntry.damageFormula(char.proficiencyBonus ?? 2, abilityMod(primalEntry.abilityKey === "str" ? primalEntry.baseStr : primalEntry.baseDex))
+    : (companion?.damage ?? "");
+  const companionNeedsRecalc = !!(primalEntry && companion && companion.maxHp !== companionMaxHp);
 
   async function adjustFamiliarHp(delta: number) {
     if (!familiar) return;
@@ -906,6 +1135,28 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
 
   async function dismissFamiliar() {
     await updateChar.mutateAsync({ campaignId, data: { familiar: null } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function adjustCompanionHp(delta: number) {
+    if (!companion) return;
+    const newHp = Math.max(0, Math.min(companionMaxHp, companion.hp + delta));
+    if (newHp === companion.hp) return;
+    await updateChar.mutateAsync({ campaignId, data: { companion: { ...companion, hp: newHp, maxHp: companionMaxHp } } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function recalculateCompanion() {
+    if (!companion || !primalEntry || !char) return;
+    const profBonus = char.proficiencyBonus ?? 2;
+    const ab = abilityMod(primalEntry.abilityKey === "str" ? primalEntry.baseStr : primalEntry.baseDex);
+    const newMaxHp = primalEntry.hpFormula(char.level ?? 1);
+    await updateChar.mutateAsync({ campaignId, data: { companion: { ...companion, hp: Math.min(companion.hp, newMaxHp), maxHp: newMaxHp, ac: primalEntry.acFormula(profBonus), attackBonus: profBonus + ab, damage: primalEntry.damageFormula(profBonus, ab) } } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function dismissCompanion() {
+    await updateChar.mutateAsync({ campaignId, data: { companion: null } });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
   }
 
@@ -1121,6 +1372,73 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
         <div className="bg-card border border-border/50 rounded p-2">
           <span className="text-xs text-muted-foreground uppercase tracking-widest">Pact Boon </span>
           <span className="text-xs text-primary font-medium">{char.pactBoon as string}</span>
+        </div>
+      )}
+
+      {/* Animal Companion / Primal Beast */}
+      {companion && (
+        <div className="bg-card border border-primary/20 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground uppercase tracking-widest">
+              {companion.mode === "primal" ? "Primal Companion" : "Animal Companion"}
+            </div>
+            <button onClick={dismissCompanion} disabled={updateChar.isPending}
+              className="text-xs text-muted-foreground/50 hover:text-destructive transition-colors px-1.5 py-0.5 rounded hover:bg-destructive/10">
+              Release
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-foreground">{companion.name}</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>AC {companionAc}</span>
+              <span>+{companionAttackBonus} {companion.mode === "primal" ? (primalEntry?.attack ?? "Attack") : "Attack"}</span>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground/70">{companionDamage}</div>
+          {/* HP bar */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">HP</span>
+              <span className={companion.hp <= 0 ? "text-xs text-destructive font-bold" : companion.hp <= Math.floor(companionMaxHp / 2) ? "text-xs text-amber-500" : "text-xs text-green-400"}>
+                {companion.hp} / {companionMaxHp}
+              </span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${companion.hp <= 0 ? "bg-destructive" : companion.hp <= Math.floor(companionMaxHp / 2) ? "bg-amber-500" : "bg-green-500"}`}
+                style={{ width: `${Math.max(0, (companion.hp / companionMaxHp) * 100)}%` }} />
+            </div>
+            <div className="flex gap-1 mt-1.5 flex-wrap">
+              {[-5, -1, +1, +5].map(delta => (
+                <button key={delta} onClick={() => adjustCompanionHp(delta)} disabled={updateChar.isPending}
+                  className={`flex-1 min-w-[2rem] text-xs rounded border py-0.5 transition-colors ${delta < 0 ? "border-destructive/40 text-destructive/70 hover:bg-destructive/10" : "border-green-600/40 text-green-500 hover:bg-green-600/10"}`}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Recalculate stats for primal companions after level-up */}
+          {companionNeedsRecalc && (
+            <button onClick={recalculateCompanion} disabled={updateChar.isPending}
+              className="w-full text-xs text-amber-500 border border-amber-500/30 rounded py-1 hover:bg-amber-500/10 transition-colors">
+              ⚠ Recalculate Stats (leveled up — stored HP {companion.maxHp} → {companionMaxHp})
+            </button>
+          )}
+          {/* Primal special ability */}
+          {primalEntry && (
+            <div className="pt-1 border-t border-border/40">
+              <p className="text-xs text-muted-foreground/60 leading-snug italic">{primalEntry.special}</p>
+            </div>
+          )}
+          {/* PHB beast notes */}
+          {companion.mode === "beast" && (() => {
+            const beastData = BEASTMASTER_PHB_BEASTS.find(b => b.name === companion.name);
+            return beastData ? (
+              <div className="pt-1 border-t border-border/40">
+                <p className="text-xs text-muted-foreground/60 leading-snug">{beastData.notes}</p>
+                <p className="text-xs text-muted-foreground/40 mt-0.5">Speed: {beastData.speed}</p>
+              </div>
+            ) : null;
+          })()}
         </div>
       )}
 

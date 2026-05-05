@@ -33,6 +33,17 @@ export type CharacterFamiliar = {
   ac: number;
 } | null;
 
+export type CharacterCompanion = {
+  mode: string;
+  primalType?: string | null;
+  name: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+  attackBonus: number;
+  damage: string;
+} | null;
+
 export type CharacterDeathSaves = { [key: string]: unknown } | null;
 
 export interface Character {
@@ -67,6 +78,7 @@ export interface Character {
   pactBoon?: string | null;
   invocations?: string[];
   familiar?: CharacterFamiliar;
+  companion?: CharacterCompanion;
   portraitUrl?: string | null;
   portraitDescription?: string | null;
   deathSaves?: CharacterDeathSaves;
@@ -180,6 +192,17 @@ export type UpdateCharacterBodyFamiliar = {
   ac: number;
 } | null;
 
+export type UpdateCharacterBodyCompanion = {
+  mode: string;
+  primalType?: string | null;
+  name: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+  attackBonus: number;
+  damage: string;
+} | null;
+
 export type UpdateCharacterBodyDeathSaves = { [key: string]: unknown } | null;
 
 export interface UpdateCharacterBody {
@@ -212,6 +235,7 @@ export interface UpdateCharacterBody {
   pactBoon?: string | null;
   invocations?: string[];
   familiar?: UpdateCharacterBodyFamiliar;
+  companion?: UpdateCharacterBodyCompanion;
   portraitUrl?: string | null;
   portraitDescription?: string | null;
   deathSaves?: UpdateCharacterBodyDeathSaves;
