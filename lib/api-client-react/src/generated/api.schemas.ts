@@ -75,6 +75,7 @@ export interface Character {
   spellSlotsUsed?: CharacterSpellSlotsUsed;
   knownSpells: string[];
   features: string[];
+  subclass?: string | null;
   pactBoon?: string | null;
   invocations?: string[];
   familiar?: CharacterFamiliar;
@@ -232,6 +233,7 @@ export interface UpdateCharacterBody {
   spellSlotsUsed?: UpdateCharacterBodySpellSlotsUsed;
   knownSpells?: string[];
   features?: string[];
+  subclass?: string | null;
   pactBoon?: string | null;
   invocations?: string[];
   familiar?: UpdateCharacterBodyFamiliar;

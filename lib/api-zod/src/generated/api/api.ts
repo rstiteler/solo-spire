@@ -90,6 +90,7 @@ export const GetCampaignResponse = zod
           spellSlotsUsed: zod.object({}).passthrough().nullish(),
           knownSpells: zod.array(zod.string()),
           features: zod.array(zod.string()),
+          subclass: zod.string().nullish(),
           pactBoon: zod.string().nullish(),
           invocations: zod.array(zod.string()).optional(),
           familiar: zod
@@ -259,6 +260,7 @@ export const SaveCampaignBody = zod.object({
       spellSlotsUsed: zod.object({}).passthrough().nullish(),
       knownSpells: zod.array(zod.string()).optional(),
       features: zod.array(zod.string()).optional(),
+      subclass: zod.string().nullish(),
       pactBoon: zod.string().nullish(),
       invocations: zod.array(zod.string()).optional(),
       familiar: zod
@@ -389,6 +391,7 @@ export const GetCharacterResponse = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()),
   features: zod.array(zod.string()),
+  subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
   familiar: zod
@@ -453,6 +456,7 @@ export const UpdateCharacterBody = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()).optional(),
   features: zod.array(zod.string()).optional(),
+  subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
   familiar: zod
@@ -510,6 +514,7 @@ export const UpdateCharacterResponse = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()),
   features: zod.array(zod.string()),
+  subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
   familiar: zod

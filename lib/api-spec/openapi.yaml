@@ -620,6 +620,9 @@ components:
           type: array
           items:
             type: string
+        subclass:
+          type: string
+          nullable: true
         pactBoon:
           type: string
           nullable: true
@@ -777,6 +780,9 @@ components:
           type: array
           items:
             type: string
+        subclass:
+          type: string
+          nullable: true
         pactBoon:
           type: string
           nullable: true

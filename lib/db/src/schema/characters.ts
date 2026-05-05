@@ -9,6 +9,7 @@ export const characters = pgTable("characters", {
   name: text("name").notNull(),
   race: text("race").notNull(),
   class: text("class").notNull(),
+  subclass: text("subclass"),
   background: text("background").notNull(),
   alignment: text("alignment"),
   backstory: text("backstory"),

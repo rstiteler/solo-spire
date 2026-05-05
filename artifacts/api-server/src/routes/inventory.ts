@@ -20,11 +20,16 @@ router.use(requireAuth);
 function calcAC(
   dex: number,
   equippedItems: Array<{ itemProperties: ItemProperties | null | undefined }>,
+  charClass?: string | null,
+  subclass?: string | null,
+  constitution?: number | null,
+  wisdom?: number | null,
 ): number {
   const dexMod = Math.floor((dex - 10) / 2);
   let baseAC = 10 + dexMod; // unarmored default
   let shieldBonus = 0;
   let hasArmor = false;
+  let hasShield = false;
 
   for (const item of equippedItems) {
     const props = item.itemProperties;
@@ -32,6 +37,7 @@ function calcAC(
 
     if (props.armorType === "shield") {
       shieldBonus = 2;
+      hasShield = true;
     } else {
       hasArmor = true;
       if (props.armorType === "light") {
@@ -45,7 +51,18 @@ function calcAC(
   }
 
   if (!hasArmor) {
-    // Keep unarmored default if no armor
+    const conMod = Math.floor(((constitution ?? 10) - 10) / 2);
+    const wisMod = Math.floor(((wisdom ?? 10) - 10) / 2);
+    if (charClass === "Barbarian") {
+      // Unarmored Defense: 10 + DEX + CON (shield is fine)
+      baseAC = 10 + dexMod + conMod;
+    } else if (charClass === "Monk" && !hasShield) {
+      // Unarmored Defense: 10 + DEX + WIS (no armor OR shield)
+      baseAC = 10 + dexMod + wisMod;
+    } else if (charClass === "Sorcerer" && subclass === "Draconic Bloodline") {
+      // Draconic Resilience: 13 + DEX
+      baseAC = 13 + dexMod;
+    }
   }
 
   return baseAC + shieldBonus;
@@ -135,7 +152,7 @@ router.put("/campaigns/:campaignId/inventory/:itemId", async (req, res) => {
           return props?.armorType != null;
         });
         if (hasArmorEquipped || bodyParsed.data.isEquipped === false) {
-          const newAC = calcAC(character.dexterity, equipped as Array<{ itemProperties: ItemProperties | null | undefined }>);
+          const newAC = calcAC(character.dexterity, equipped as Array<{ itemProperties: ItemProperties | null | undefined }>, character.class, character.subclass, character.constitution, character.wisdom);
           await db.update(characters)
             .set({ ac: newAC, updatedAt: new Date() })
             .where(eq(characters.campaignId, paramsParsed.data.campaignId));

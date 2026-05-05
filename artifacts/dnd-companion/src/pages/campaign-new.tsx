@@ -428,20 +428,27 @@ function modStr(score: number): string { const m = mod(score); return m >= 0 ? `
 const TOTAL_POINTS = 27;
 const COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 
-function calcInitialAC(dex: number, gearItems: GearItem[]): number {
+function calcInitialAC(dex: number, gearItems: GearItem[], charClass?: string, subclass?: string, con?: number, wis?: number): number {
   const dexMod = mod(dex);
+  const conMod = mod(con ?? 10);
+  const wisMod = mod(wis ?? 10);
   let baseAC = 10 + dexMod;
   let shieldBonus = 0;
   let hasArmor = false;
+  let hasShield = false;
   for (const item of gearItems.filter(i => i.isEquipped && i.itemProperties?.armorType)) {
     const props = item.itemProperties!;
-    if (props.armorType === "shield") { shieldBonus = 2; continue; }
+    if (props.armorType === "shield") { shieldBonus = 2; hasShield = true; continue; }
     hasArmor = true;
     if (props.armorType === "light") baseAC = (props.acBase ?? 11) + dexMod;
     else if (props.armorType === "medium") baseAC = (props.acBase ?? 13) + Math.min(dexMod, 2);
     else if (props.armorType === "heavy") baseAC = props.acBase ?? 16;
   }
-  if (!hasArmor) { /* keep unarmored */ }
+  if (!hasArmor) {
+    if (charClass === "Barbarian") baseAC = 10 + dexMod + conMod;
+    else if (charClass === "Monk" && !hasShield) baseAC = 10 + dexMod + wisMod;
+    else if (charClass === "Sorcerer" && subclass === "Draconic Bloodline") baseAC = 13 + dexMod;
+  }
   return baseAC + shieldBonus;
 }
 
@@ -541,7 +548,7 @@ export default function CampaignNew() {
     try {
       const selectedClass = classInfo;
       const gearItems = selectedClass?.startingGear[form.gearPackageIndex]?.items ?? [];
-      const initialAC = calcInitialAC(finalStats.dexterity, gearItems);
+      const initialAC = calcInitialAC(finalStats.dexterity, gearItems, form.class, form.selectedSubclass, finalStats.constitution, finalStats.wisdom);
 
       const campaign = await createCampaign.mutateAsync({ data: { name: form.campaignName || "The Unnamed Quest" } });
 
@@ -575,6 +582,7 @@ export default function CampaignNew() {
           knownSpells,
           spellSlots: selectedClass?.spellSlots ?? undefined,
           spellSlotsUsed: selectedClass?.spellSlots ? Object.fromEntries(Object.keys(selectedClass.spellSlots).map(k => [k, 0])) : undefined,
+          subclass: form.selectedSubclass || null,
           features: form.selectedSubclass ? [form.selectedSubclass] : [],
         },
       });
@@ -839,7 +847,7 @@ export default function CampaignNew() {
                 <p className="text-xs text-muted-foreground mt-3 bg-card border border-border/50 rounded p-2">
                   <strong className="text-foreground/70">Starting AC with this package:</strong>{" "}
                   <span className="text-primary font-bold">
-                    {calcInitialAC(form.stats.dexterity, classInfo.startingGear[form.gearPackageIndex]?.items ?? [])}
+                    {calcInitialAC(form.stats.dexterity, classInfo.startingGear[form.gearPackageIndex]?.items ?? [], form.class, form.selectedSubclass, form.stats.constitution, form.stats.wisdom)}
                   </span>
                   <span className="text-muted-foreground/60"> (based on DEX {modStr(form.stats.dexterity)})</span>
                 </p>
@@ -1035,7 +1043,7 @@ export default function CampaignNew() {
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Starting Gear</div>
                 <div className="text-sm text-muted-foreground">{classInfo?.startingGear[form.gearPackageIndex]?.label ?? "—"}</div>
-                <div className="text-xs text-primary mt-1">Starting AC: {calcInitialAC(finalStats.dexterity, classInfo?.startingGear[form.gearPackageIndex]?.items ?? [])}</div>
+                <div className="text-xs text-primary mt-1">Starting AC: {calcInitialAC(finalStats.dexterity, classInfo?.startingGear[form.gearPackageIndex]?.items ?? [], form.class, form.selectedSubclass, finalStats.constitution, finalStats.wisdom)}</div>
               </div>
 
               {/* Spells */}
