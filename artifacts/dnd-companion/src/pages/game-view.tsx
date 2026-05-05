@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ChevronLeft, Save, Send, Dices, Sword, Shield, Heart, Zap, BookOpen, Package,
   ChevronDown, ChevronUp, User, Star, CheckCircle, XCircle, Minus, Plus,
-  Trash2, PlusCircle, Info, Pencil, Sparkles, X
+  Trash2, PlusCircle, Info, Pencil, Sparkles, X, Gift
 } from "lucide-react";
 
 type ItemProps = {
@@ -514,21 +514,37 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
 function DiceTray({ onRoll }: { onRoll: (roll: DiceRoll) => void }) {
   const rollDice = useRollDice();
   const [rolling, setRolling] = useState<number | null>(null);
+  const [displayVal, setDisplayVal] = useState(1);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function handleRoll(sides: number) {
     setRolling(sides);
+    setDisplayVal(Math.ceil(Math.random() * sides));
+    intervalRef.current = setInterval(() => {
+      setDisplayVal(Math.ceil(Math.random() * sides));
+    }, 70);
     try {
       const result = await rollDice.mutateAsync({ data: { expression: `1d${sides}` } });
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      setDisplayVal(result.total);
       onRoll({ expression: result.expression, label: result.label ?? null, total: result.total, rolls: result.rolls, modifier: result.modifier, details: result.details });
-    } finally { setRolling(null); }
+      await new Promise(r => setTimeout(r, 350));
+    } finally {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      setRolling(null);
+    }
   }
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
       {DICE_FACES.map(d => (
         <button key={d} data-testid={`button-roll-d${d}`} onClick={() => handleRoll(d)} disabled={rolling !== null}
-          className={`relative w-10 h-10 rounded border font-serif font-bold text-xs transition-all ${rolling === d ? "border-primary bg-primary/20 text-primary animate-pulse" : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"} disabled:opacity-50`}>
-          d{d}
+          className={`relative w-10 h-10 rounded border font-serif font-bold transition-all flex items-center justify-center ${rolling === d ? "border-primary bg-primary/20 text-primary shadow-[0_0_8px_rgba(var(--primary)/0.4)]" : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"} disabled:opacity-50`}>
+          {rolling === d
+            ? <span className="text-base font-black tabular-nums leading-none">{displayVal}</span>
+            : <span className="text-xs">{`d${d}`}</span>
+          }
         </button>
       ))}
     </div>
@@ -1198,9 +1214,214 @@ function AddItemDialog({ campaignId, open, onClose }: { campaignId: number; open
   );
 }
 
+// ─── Edit Item Dialog ───────────────────────────────────────────────────────
+
+const WEAPON_ABILITY_TAGS = ["Magical", "Silvered", "Hexblade", "Pact of the Blade", "Finesse", "Thrown", "Reach", "Two-handed", "Light", "Versatile", "Returning", "Bound"];
+
+function EditItemDialog({ item, campaignId, onClose }: {
+  item: { id: number; name: string; itemType: string; quantity: number; description: string | null; isEquipped: boolean; itemProperties: unknown };
+  campaignId: number;
+  onClose: () => void;
+}) {
+  const updateItem = useUpdateInventoryItem();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const props = (item.itemProperties ?? {}) as ItemProps;
+  const existingTags = (props.weaponProperties ?? []) as string[];
+
+  const [form, setForm] = useState({
+    name: item.name,
+    itemType: item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc",
+    quantity: item.quantity,
+    notes: item.description ?? "",
+    armorType: (props.armorType ?? "") as "" | "light" | "medium" | "heavy" | "shield",
+    acBase: props.acBase?.toString() ?? "",
+    stealthDisadvantage: props.stealthDisadvantage ?? false,
+    damage: props.damage ?? "",
+    damageType: props.damageType ?? "",
+    versatileDamage: props.versatileDamage ?? "",
+    tags: existingTags as string[],
+  });
+
+  function toggleTag(tag: string) {
+    setForm(f => ({
+      ...f,
+      tags: f.tags.includes(tag) ? f.tags.filter(t => t !== tag) : [...f.tags, tag],
+    }));
+  }
+
+  async function handleSave() {
+    const itemProperties: ItemProps | null = (() => {
+      if (form.itemType === "armor" && form.armorType) {
+        return {
+          armorType: form.armorType,
+          acBase: form.acBase ? parseInt(form.acBase) : undefined,
+          stealthDisadvantage: form.stealthDisadvantage || undefined,
+          ...(form.tags.length > 0 ? { weaponProperties: form.tags } : {}),
+        };
+      }
+      if (form.itemType === "weapon" || form.tags.length > 0) {
+        return {
+          ...(form.damage ? { damage: form.damage } : {}),
+          ...(form.damageType ? { damageType: form.damageType } : {}),
+          ...(form.versatileDamage ? { versatileDamage: form.versatileDamage } : {}),
+          ...(form.tags.length > 0 ? { weaponProperties: form.tags } : {}),
+        };
+      }
+      return null;
+    })();
+
+    try {
+      await updateItem.mutateAsync({
+        campaignId,
+        itemId: item.id,
+        data: {
+          name: form.name.trim(),
+          itemType: form.itemType,
+          quantity: form.quantity,
+          description: form.notes.trim() || null,
+          itemProperties,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListInventoryQueryKey(campaignId) });
+      await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+      toast({ title: "Item updated." });
+      onClose();
+    } catch {
+      toast({ title: "Failed to save item.", variant: "destructive" });
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="bg-card border-border text-foreground max-w-md max-h-[88vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-primary">Edit Item</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {/* Name + type + quantity */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Item Name</Label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              className="h-8 text-sm bg-background border-border text-foreground" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Type</Label>
+              <Select value={form.itemType} onValueChange={v => setForm(f => ({ ...f, itemType: v as typeof f.itemType, armorType: "", acBase: "", damage: "", damageType: "" }))}>
+                <SelectTrigger className="h-8 text-sm bg-background border-border text-foreground"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  {["weapon", "armor", "consumable", "tool", "treasure", "misc"].map(t => (
+                    <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Quantity</Label>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setForm(f => ({ ...f, quantity: Math.max(1, f.quantity - 1) }))}
+                  className="w-7 h-8 rounded border border-border text-muted-foreground hover:text-foreground flex items-center justify-center text-sm flex-shrink-0">−</button>
+                <div className="flex-1 text-center text-sm font-bold bg-background border border-border rounded py-1">{form.quantity}</div>
+                <button onClick={() => setForm(f => ({ ...f, quantity: f.quantity + 1 }))}
+                  className="w-7 h-8 rounded border border-border text-muted-foreground hover:text-foreground flex items-center justify-center text-sm flex-shrink-0">+</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Weapon stats */}
+          {form.itemType === "weapon" && (
+            <div className="grid grid-cols-3 gap-2 p-2 bg-background/50 rounded border border-border/50">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Damage</Label>
+                <Input value={form.damage} onChange={e => setForm(f => ({ ...f, damage: e.target.value }))}
+                  placeholder="1d8" className="h-7 text-xs bg-background border-border text-foreground" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Type</Label>
+                <Input value={form.damageType} onChange={e => setForm(f => ({ ...f, damageType: e.target.value }))}
+                  placeholder="slashing" className="h-7 text-xs bg-background border-border text-foreground" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Versatile</Label>
+                <Input value={form.versatileDamage} onChange={e => setForm(f => ({ ...f, versatileDamage: e.target.value }))}
+                  placeholder="1d10" className="h-7 text-xs bg-background border-border text-foreground" />
+              </div>
+            </div>
+          )}
+
+          {/* Armor stats */}
+          {form.itemType === "armor" && (
+            <div className="p-2 bg-background/50 rounded border border-border/50 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Armor Type</Label>
+                  <Select value={form.armorType} onValueChange={v => setForm(f => ({ ...f, armorType: v as typeof f.armorType }))}>
+                    <SelectTrigger className="h-7 text-xs bg-background border-border text-foreground"><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border text-foreground">
+                      <SelectItem value="">No stats</SelectItem>
+                      {["light", "medium", "heavy", "shield"].map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.armorType && form.armorType !== "shield" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">AC Base</Label>
+                    <Input type="number" value={form.acBase} onChange={e => setForm(f => ({ ...f, acBase: e.target.value }))}
+                      placeholder="e.g. 13" className="h-7 text-xs bg-background border-border text-foreground" />
+                  </div>
+                )}
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.stealthDisadvantage}
+                  onChange={e => setForm(f => ({ ...f, stealthDisadvantage: e.target.checked }))}
+                  className="rounded accent-primary" />
+                <span className="text-xs text-muted-foreground">Stealth Disadvantage</span>
+              </label>
+            </div>
+          )}
+
+          {/* Ability / property tags */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Properties & Special Abilities</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {WEAPON_ABILITY_TAGS.map(tag => {
+                const on = form.tags.includes(tag);
+                return (
+                  <button key={tag} onClick={() => toggleTag(tag)}
+                    className={`px-2 py-0.5 rounded border text-xs transition-all ${on ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"}`}>
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground/50">Tags appear in AI context (e.g. Hexblade, Pact of the Blade affect how the DM rules your attacks)</p>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Notes</Label>
+            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={3} placeholder="Cursed, attuned, lore, how you got it..."
+              className="text-sm bg-background border-border text-foreground resize-none" />
+          </div>
+        </div>
+
+        <DialogFooter className="pt-2 border-t border-border gap-2">
+          <Button variant="outline" onClick={onClose} className="border-border text-muted-foreground hover:text-foreground">Cancel</Button>
+          <Button onClick={handleSave} disabled={updateItem.isPending || !form.name.trim()}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-serif">
+            {updateItem.isPending ? "Saving…" : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Sidebar Panel ─────────────────────────────────────────────────────────
 
-function SidebarPanel({ campaignId }: { campaignId: number }) {
+function SidebarPanel({ campaignId, onEditItem }: { campaignId: number; onEditItem: (item: { id: number; name: string; itemType: string; quantity: number; description: string | null; isEquipped: boolean; itemProperties: unknown }) => void }) {
   const [showAddItem, setShowAddItem] = useState(false);
   const { data: items } = useListInventory(campaignId, { query: { queryKey: getListInventoryQueryKey(campaignId) } });
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
@@ -1287,6 +1508,11 @@ function SidebarPanel({ campaignId }: { campaignId: number }) {
                         {item.isEquipped ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
                     )}
+                    <button onClick={() => onEditItem({ id: item.id, name: item.name, itemType: item.itemType, quantity: item.quantity, description: item.description ?? null, isEquipped: item.isEquipped ?? false, itemProperties: item.itemProperties })}
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+                      title="Edit item">
+                      <Pencil className="w-3 h-3" />
+                    </button>
                     <button onClick={() => handleDelete(item.id)}
                       className="text-xs text-muted-foreground hover:text-destructive transition-colors p-0.5 opacity-0 group-hover:opacity-100"
                       title="Remove item">
@@ -1330,6 +1556,13 @@ export default function GameView() {
   const [showDice, setShowDice] = useState(false);
   const [mobileTab, setMobileTab] = useState<"character" | "chat" | "sidebar">("chat");
   const [pendingLevelUp, setPendingLevelUp] = useState<{ newLevel: number; hitDie: number } | null>(null);
+  const [pendingRollPrompt, setPendingRollPrompt] = useState<{ dice: string; reason: string; dc?: number } | null>(null);
+  const [pendingLootOffer, setPendingLootOffer] = useState<Array<{ name: string; itemType: string; quantity?: number; description?: string }> | null>(null);
+  type EditableItem = { id: number; name: string; itemType: string; quantity: number; description: string | null; isEquipped: boolean; itemProperties: unknown };
+  const [editingItem, setEditingItem] = useState<EditableItem | null>(null);
+
+  const rollDiceForPrompt = useRollDice();
+  const addInventoryItem = useAddInventoryItem();
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1338,12 +1571,63 @@ export default function GameView() {
 
   function handleDiceRoll(roll: DiceRoll) { setPendingRolls(prev => [...prev, roll]); }
 
+  async function handleRollPrompt() {
+    if (!pendingRollPrompt || rollDiceForPrompt.isPending) return;
+    const result = await rollDiceForPrompt.mutateAsync({ data: { expression: pendingRollPrompt.dice } });
+    const roll: DiceRoll = { expression: result.expression, label: pendingRollPrompt.reason, total: result.total, rolls: result.rolls, modifier: result.modifier, details: result.details };
+    setPendingRolls(prev => [...prev, roll]);
+    setPendingRollPrompt(null);
+    setShowDice(true);
+  }
+
+  async function addLootItem(item: { name: string; itemType: string; quantity?: number; description?: string }, index: number) {
+    await addInventoryItem.mutateAsync({
+      campaignId,
+      data: {
+        name: item.name,
+        itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
+        quantity: item.quantity ?? 1,
+        description: item.description ?? null,
+        isEquipped: false,
+        itemProperties: null,
+      },
+    });
+    await queryClient.invalidateQueries({ queryKey: getListInventoryQueryKey(campaignId) });
+    setPendingLootOffer(prev => {
+      if (!prev) return null;
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : null;
+    });
+    toast({ title: `${item.name} added to inventory.` });
+  }
+
+  async function takeAllLoot() {
+    if (!pendingLootOffer) return;
+    for (const item of pendingLootOffer) {
+      await addInventoryItem.mutateAsync({
+        campaignId,
+        data: {
+          name: item.name,
+          itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
+          quantity: item.quantity ?? 1,
+          description: item.description ?? null,
+          isEquipped: false,
+          itemProperties: null,
+        },
+      });
+    }
+    await queryClient.invalidateQueries({ queryKey: getListInventoryQueryKey(campaignId) });
+    setPendingLootOffer(null);
+    toast({ title: "All loot added to inventory." });
+  }
+
   const sendMessage = useCallback(async () => {
     if ((!input.trim() && pendingRolls.length === 0) || streaming) return;
     const msg = input.trim();
     setInput("");
     const rolls = [...pendingRolls];
     setPendingRolls([]);
+    setPendingRollPrompt(null);
     setStreaming(true);
     setStreamingContent("");
 
@@ -1369,7 +1653,16 @@ export default function GameView() {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.content) setStreamingContent(c => c + data.content);
+              if (data.content) {
+                setStreamingContent(c => {
+                  const raw = c + data.content;
+                  return raw
+                    .replace(/<ROLL_PROMPT[^/]*\/>/g, "")
+                    .replace(/<LOOT_OFFER>[\s\S]*?<\/LOOT_OFFER>/g, "")
+                    .replace(/<LEVEL_UP>[\s\S]*?<\/LEVEL_UP>/g, "")
+                    .replace(/<STATE_UPDATE>[\s\S]*?<\/STATE_UPDATE>/g, "");
+                });
+              }
               if (data.done) {
                 setStreamingContent("");
                 await Promise.all([
@@ -1382,6 +1675,8 @@ export default function GameView() {
                 if (data.levelUp && data.newLevel) {
                   setPendingLevelUp({ newLevel: data.newLevel, hitDie: data.hitDie ?? 8 });
                 }
+                if (data.rollPrompt) setPendingRollPrompt(data.rollPrompt);
+                if (data.lootOffer) setPendingLootOffer(data.lootOffer);
               }
               if (data.error) toast({ title: "AI Error", description: data.error, variant: "destructive" });
             } catch { /* ignore */ }
@@ -1461,6 +1756,68 @@ export default function GameView() {
                 </div>
               </div>
             )}
+            {/* Roll Prompt Banner */}
+            {pendingRollPrompt && !streaming && (
+              <div className="border border-primary/50 bg-primary/5 rounded-lg p-3 flex items-start gap-3 animate-in fade-in duration-300">
+                <Dices className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5 font-medium">Roll Needed</div>
+                  <div className="text-sm font-serif text-foreground leading-snug">{pendingRollPrompt.reason}</div>
+                  {pendingRollPrompt.dc && (
+                    <div className="text-xs text-muted-foreground/70 mt-0.5">Difficulty Class: {pendingRollPrompt.dc}</div>
+                  )}
+                </div>
+                <button
+                  onClick={handleRollPrompt}
+                  disabled={rollDiceForPrompt.isPending}
+                  className="flex-shrink-0 px-3 py-1.5 rounded border border-primary bg-primary/10 text-primary hover:bg-primary/25 text-sm font-bold font-serif transition-all disabled:opacity-50 flex items-center gap-1.5">
+                  <Dices className="w-3.5 h-3.5" />
+                  Roll {pendingRollPrompt.dice}
+                </button>
+              </div>
+            )}
+
+            {/* Loot Offer Panel */}
+            {pendingLootOffer && pendingLootOffer.length > 0 && !streaming && (
+              <div className="border border-amber-500/40 bg-amber-500/5 rounded-lg p-3 animate-in fade-in duration-300">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Gift className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs text-amber-400/90 uppercase tracking-wider font-semibold">Loot Available</span>
+                  <button onClick={() => setPendingLootOffer(null)} className="ml-auto text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-1.5 mb-3">
+                  {pendingLootOffer.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 py-1 px-1">
+                      <span className="text-sm flex-1 text-foreground font-medium">
+                        {item.name}
+                        {(item.quantity ?? 1) > 1 && <span className="text-muted-foreground font-normal"> ×{item.quantity}</span>}
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize px-1.5 py-0.5 rounded bg-card border border-border">{item.itemType}</span>
+                      <button
+                        onClick={() => addLootItem(item, i)}
+                        disabled={addInventoryItem.isPending}
+                        className="flex-shrink-0 w-7 h-7 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 transition-all flex items-center justify-center disabled:opacity-50"
+                        title={`Add ${item.name} to inventory`}>
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-amber-500/20">
+                  <button onClick={takeAllLoot} disabled={addInventoryItem.isPending}
+                    className="flex-1 text-xs py-1.5 rounded border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors font-medium disabled:opacity-50">
+                    Take All
+                  </button>
+                  <button onClick={() => setPendingLootOffer(null)}
+                    className="flex-1 text-xs py-1.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors">
+                    Leave It
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div ref={chatEndRef} />
           </div>
 
@@ -1501,9 +1858,13 @@ export default function GameView() {
 
         {/* RIGHT: Sidebar */}
         <div className={`w-56 xl:w-64 flex-shrink-0 border-l border-border ${mobileTab === "sidebar" ? "block" : "hidden"} lg:block`}>
-          <SidebarPanel campaignId={campaignId} />
+          <SidebarPanel campaignId={campaignId} onEditItem={setEditingItem} />
         </div>
       </div>
+
+      {editingItem && (
+        <EditItemDialog item={editingItem} campaignId={campaignId} onClose={() => setEditingItem(null)} />
+      )}
 
       {pendingLevelUp && (
         <LevelUpModal

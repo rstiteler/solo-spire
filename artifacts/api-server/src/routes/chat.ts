@@ -59,22 +59,30 @@ CORE RESPONSIBILITIES:
 - Award XP for combat encounters (by challenge rating), clever roleplay, and milestone achievements.
 
 DICE ROLLING:
-- When you need to make rolls (enemy attacks, saving throws, skill checks, random encounters), explicitly state what you're rolling and why.
-- Format dice roll results as: **[ROLL: {expression} = {result}]**
-- For enemy attacks: roll to hit, compare to player's AC, then roll damage if it hits.
-- Example: "The orc swings his greataxe. **[ROLL: 1d20+5 = 14]** That's 14 — it hits your AC of 13! **[ROLL: 2d12+3 = 11]** You take 11 slashing damage."
-- Always narrate the result naturally in the story, don't just state numbers.
+- PLAYER dice rolls (ability checks, attack rolls, saving throws, skill checks): Do NOT roll these yourself. Conclude your narrative at the moment the roll is needed, then emit ONLY this self-closing tag as the final line of your response:
+  <ROLL_PROMPT dice="XdY" reason="Brief reason (e.g. Stealth check)" dc="N"/>
+  The "dc" attribute is optional — omit it for attack rolls or contested rolls. After emitting this tag, STOP. Wait for the player to roll and report back.
+- DM dice rolls (enemy attacks, enemy damage, random encounter tables, NPC saves): Roll these yourself and narrate naturally. Format: **[ROLL: 1d20+5 = 14]**
+- NEVER auto-roll dice the player should roll.
 
 STATE TRACKING:
-When the game state changes (HP, gold, XP, quests, inventory), append a structured JSON block at the very end of your response (after all narrative text), on a new line:
-  <STATE_UPDATE>{"hp": <new absolute HP>, "tempHp": <new temp HP>, "quests": [{"action": "add"|"complete"|"fail", "title": "...", "description": "...", "isMain": true|false}], "xp": <xp to award this turn>, "gold": <gold change, can be negative>, "items": [{"action": "add"|"remove", "name": "...", "itemType": "weapon"|"armor"|"consumable"|"tool"|"treasure"|"misc", "quantity": 1}]}</STATE_UPDATE>
+When HP, gold, XP, or quests change, append this block at the very end of your response (after all narrative):
+  <STATE_UPDATE>{"hp": <new absolute HP>, "tempHp": <new temp HP>, "quests": [{"action": "add"|"complete"|"fail", "title": "...", "description": "...", "isMain": true|false}], "xp": <xp awarded this turn>, "gold": <gold change, can be negative>, "items": [{"action": "remove", "name": "...", "quantity": 1}]}</STATE_UPDATE>
+
+LOOT AND FOUND ITEMS:
+- When the player discovers, earns, or is offered items (loot drops, rewards, found treasure, shop purchases): Do NOT use STATE_UPDATE to add items. Instead, append a LOOT_OFFER block immediately after the narrative:
+  <LOOT_OFFER>[{"name":"Iron Shortsword","itemType":"weapon","quantity":1,"description":"A well-balanced blade"},{"name":"Gold Coins","itemType":"treasure","quantity":15}]</LOOT_OFFER>
+  Valid itemType values: "weapon", "armor", "consumable", "tool", "treasure", "misc"
+  The player will choose which items to pick up. NEVER add items automatically.
+- STATE_UPDATE "items" remove action is still valid when the player uses/drops an item from their existing inventory.
 
 CRITICAL STATE RULES:
-- Include ONLY the fields that changed this turn. Omit any field that didn't change.
-- Omit the STATE_UPDATE block entirely if absolutely nothing changed.
-- NEVER re-emit rewards, items, XP, or gold that were already granted in a previous response, even if you reference those things in later narration. Each STATE_UPDATE is for NEW changes only.
-- Always include "hp" in the STATE_UPDATE whenever the player takes damage OR heals (even partial). Use the exact new HP value (never go below 0 or above maxHp). The [CURRENT GAME STATE] block shows the current HP so you know the starting value.
+- Include ONLY the fields that changed this turn. Omit unchanged fields entirely.
+- Omit the STATE_UPDATE block if nothing changed (no HP/XP/gold/quest updates).
+- NEVER re-emit XP, gold, or quests already granted in previous responses.
+- Always include "hp" in STATE_UPDATE whenever the player takes damage OR heals. Use the exact new HP value (never below 0 or above maxHp).
 - Include "tempHp" whenever temporary HP is granted or removed.
+- Do NOT put item additions in STATE_UPDATE — use LOOT_OFFER instead.
 
 HP TRACKING:
 - When the player takes damage or heals, clearly state the new HP total in the narrative.
@@ -249,6 +257,30 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       cleanResponse = cleanResponse.replace(levelUpMatch[0], "").trim();
     }
 
+    // Parse ROLL_PROMPT tag
+    let rollPrompt: { dice: string; reason: string; dc?: number } | null = null;
+    const rollPromptMatch = fullResponse.match(/<ROLL_PROMPT\s([^/]*?)\/>/);
+    if (rollPromptMatch) {
+      const attrs = rollPromptMatch[1];
+      const diceM = attrs.match(/dice="([^"]+)"/);
+      const reasonM = attrs.match(/reason="([^"]+)"/);
+      const dcM = attrs.match(/dc="(\d+)"/);
+      if (diceM && reasonM) {
+        rollPrompt = { dice: diceM[1], reason: reasonM[1], ...(dcM ? { dc: parseInt(dcM[1]) } : {}) };
+        cleanResponse = cleanResponse.replace(rollPromptMatch[0], "").trim();
+      }
+    }
+
+    // Parse LOOT_OFFER tag
+    let lootOffer: Array<{ name: string; itemType: string; quantity?: number; description?: string }> | null = null;
+    const lootOfferMatch = fullResponse.match(/<LOOT_OFFER>([\s\S]*?)<\/LOOT_OFFER>/);
+    if (lootOfferMatch) {
+      try {
+        lootOffer = JSON.parse(lootOfferMatch[1].trim());
+        cleanResponse = cleanResponse.replace(lootOfferMatch[0], "").trim();
+      } catch { /* ignore */ }
+    }
+
     await db.insert(chatMessages).values({ campaignId, role: "assistant", content: cleanResponse });
 
     if (stateUpdate) {
@@ -301,27 +333,14 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
           }
         }
 
-        // Items (with deduplication)
+        // Items — only handle "remove" actions; additions are presented as LOOT_OFFER for player to pick up
         if (stateUpdate.items) {
           const currentInventory = await db.select().from(inventoryItems).where(eq(inventoryItems.campaignId, campaignId));
           for (const item of stateUpdate.items) {
+            if (item.action !== "remove") continue;
             const normalizedName = item.name.trim().toLowerCase();
             const existing = currentInventory.find(i => i.name.trim().toLowerCase() === normalizedName);
-            if (item.action === "add") {
-              if (existing) {
-                await db.update(inventoryItems)
-                  .set({ quantity: existing.quantity + (item.quantity ?? 1) })
-                  .where(eq(inventoryItems.id, existing.id));
-                existing.quantity += (item.quantity ?? 1);
-              } else {
-                const newItem = await db.insert(inventoryItems).values({
-                  campaignId, name: item.name.trim(),
-                  itemType: (item.itemType as "weapon" | "armor" | "consumable" | "tool" | "treasure" | "misc") ?? "misc",
-                  quantity: item.quantity ?? 1, isEquipped: false,
-                }).returning();
-                if (newItem[0]) currentInventory.push(newItem[0]);
-              }
-            } else if (item.action === "remove" && existing) {
+            if (existing) {
               const removeQty = item.quantity ?? 1;
               if (existing.quantity <= removeQty) {
                 await db.delete(inventoryItems).where(eq(inventoryItems.id, existing.id));
@@ -382,7 +401,7 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
 
     await db.update(campaigns).set({ lastPlayedAt: new Date(), updatedAt: new Date() }).where(eq(campaigns.id, campaignId));
 
-    res.write(`data: ${JSON.stringify({ done: true, levelUp, ...newLevelInfo })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true, levelUp, ...newLevelInfo, ...(rollPrompt ? { rollPrompt } : {}), ...(lootOffer ? { lootOffer } : {}) })}\n\n`);
     res.end();
   } catch (err) {
     req.log.error({ err }, "Failed to process chat message");
