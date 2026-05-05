@@ -26,6 +26,13 @@ export type CharacterSpellSlots = { [key: string]: unknown } | null;
 
 export type CharacterSpellSlotsUsed = { [key: string]: unknown } | null;
 
+export type CharacterFamiliar = {
+  type: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+} | null;
+
 export type CharacterDeathSaves = { [key: string]: unknown } | null;
 
 export interface Character {
@@ -57,6 +64,9 @@ export interface Character {
   spellSlotsUsed?: CharacterSpellSlotsUsed;
   knownSpells: string[];
   features: string[];
+  pactBoon?: string | null;
+  invocations?: string[];
+  familiar?: CharacterFamiliar;
   portraitUrl?: string | null;
   portraitDescription?: string | null;
   deathSaves?: CharacterDeathSaves;
@@ -163,6 +173,13 @@ export type UpdateCharacterBodySpellSlotsUsed = {
   [key: string]: unknown;
 } | null;
 
+export type UpdateCharacterBodyFamiliar = {
+  type: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+} | null;
+
 export type UpdateCharacterBodyDeathSaves = { [key: string]: unknown } | null;
 
 export interface UpdateCharacterBody {
@@ -192,6 +209,9 @@ export interface UpdateCharacterBody {
   spellSlotsUsed?: UpdateCharacterBodySpellSlotsUsed;
   knownSpells?: string[];
   features?: string[];
+  pactBoon?: string | null;
+  invocations?: string[];
+  familiar?: UpdateCharacterBodyFamiliar;
   portraitUrl?: string | null;
   portraitDescription?: string | null;
   deathSaves?: UpdateCharacterBodyDeathSaves;

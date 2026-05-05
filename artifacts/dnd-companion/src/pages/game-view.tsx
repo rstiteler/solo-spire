@@ -181,6 +181,85 @@ const CLASS_HIT_DICE: Record<string, number> = {
 const ASI_LEVELS = new Set([4, 8, 12, 16, 19]);
 const ASI_STAT_KEYS = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"] as const;
 
+// ─── Warlock Mechanics ───────────────────────────────────────────────────────
+
+type Invocation = {
+  name: string;
+  description: string;
+  prereqPact?: "Chain" | "Blade" | "Tome";
+  prereqLevel?: number;
+  chainApplies?: boolean;
+};
+
+const ELDRITCH_INVOCATIONS: Invocation[] = [
+  // Core — no prerequisites
+  { name: "Agonizing Blast", description: "Add CHA modifier to Eldritch Blast damage rolls" },
+  { name: "Armor of Shadows", description: "Cast Mage Armor on yourself at will, no spell slot required" },
+  { name: "Devil's Sight", description: "See normally in both magical and nonmagical darkness to 120 ft" },
+  { name: "Eldritch Mind", description: "Advantage on Constitution saving throws to maintain concentration" },
+  { name: "Eldritch Sight", description: "Cast Detect Magic at will, no spell slot required" },
+  { name: "Eldritch Spear", description: "Eldritch Blast range extends to 300 ft" },
+  { name: "Eyes of the Rune Keeper", description: "Read all writing, regardless of language" },
+  { name: "Fiendish Vigor", description: "Cast False Life on yourself at will (1st-level effect, no material components)" },
+  { name: "Gaze of Two Minds", description: "Use your action to perceive through a willing humanoid's senses until start of your next turn" },
+  { name: "Mask of Many Faces", description: "Cast Disguise Self at will, no spell slot required" },
+  { name: "Misty Visions", description: "Cast Silent Image at will, no spell slot required" },
+  { name: "Repelling Blast", description: "Creatures hit by Eldritch Blast are pushed 10 ft away from you" },
+  { name: "Beast Speech", description: "Cast Speak with Animals at will, no spell slot required" },
+  { name: "Beguiling Influence", description: "Proficiency in Deception and Persuasion skills" },
+  { name: "Grasp of Hadar", description: "Pull a creature hit by Eldritch Blast 10 ft toward you" },
+  { name: "Lance of Lethargy", description: "Eldritch Blast reduces one target's speed by 10 ft until your next turn" },
+  // Pact of the Chain — enhances the familiar
+  { name: "Gift of the Ever-Living Ones", description: "When your familiar is within 100 ft, maximize all healing you roll", prereqPact: "Chain", chainApplies: true },
+  { name: "Investment of the Chain Master", description: "Familiar gains fly/swim speed, resistance to damage, and can attack as your bonus action", prereqPact: "Chain", chainApplies: true },
+  { name: "Voice of the Chain Master", description: "Perceive through and speak through your familiar; telepathic range unlimited", prereqPact: "Chain", chainApplies: true },
+  { name: "Chains of Carceri", description: "Cast Hold Monster at will, targeting celestials, fiends, or elementals", prereqPact: "Chain", prereqLevel: 15, chainApplies: true },
+  // Pact of the Blade
+  { name: "Eldritch Smite", description: "Spend a pact magic slot when you hit: deal 1d8 force damage per slot level + knock prone if Large or smaller", prereqPact: "Blade" },
+  { name: "Thirsting Blade", description: "Attack twice when you take the Attack action with your pact weapon", prereqPact: "Blade", prereqLevel: 5 },
+  { name: "Lifedrinker", description: "Pact weapon deals extra necrotic damage equal to your Charisma modifier", prereqPact: "Blade", prereqLevel: 12 },
+  // Pact of the Tome
+  { name: "Book of Ancient Secrets", description: "Inscribe ritual spells in your Book of Shadows and cast them as rituals", prereqPact: "Tome" },
+  // Level-gated general
+  { name: "Mire the Mind", description: "Cast Slow once per long rest using a pact magic spell slot", prereqLevel: 5 },
+  { name: "One with Shadows", description: "When in dim light or darkness, use action to become invisible until you move or act", prereqLevel: 5 },
+  { name: "Sign of Ill Omen", description: "Cast Bestow Curse once per long rest using a pact magic spell slot", prereqLevel: 5 },
+  { name: "Gift of the Depths", description: "Breathe underwater; gain swim speed equal to walking speed", prereqLevel: 5 },
+  { name: "Dreadful Word", description: "Cast Confusion once per long rest using a pact magic spell slot", prereqLevel: 7 },
+  { name: "Sculptor of Flesh", description: "Cast Polymorph once per long rest using a pact magic spell slot", prereqLevel: 7 },
+  { name: "Trickster's Escape", description: "Cast Freedom of Movement on yourself once per long rest without a spell slot", prereqLevel: 7 },
+  { name: "Bewitching Whispers", description: "Cast Compulsion once per long rest using a pact magic spell slot", prereqLevel: 7 },
+  { name: "Ascendant Step", description: "Cast Levitate on yourself at will, no spell slot required", prereqLevel: 9 },
+  { name: "Otherworldly Leap", description: "Cast Jump on yourself at will, no spell slot required", prereqLevel: 9 },
+  { name: "Whispers of the Grave", description: "Cast Speak with Dead at will, no spell slot required", prereqLevel: 9 },
+  { name: "Minions of Chaos", description: "Cast Conjure Elemental once per long rest using a pact magic spell slot", prereqLevel: 9 },
+  { name: "Master of Myriad Forms", description: "Cast Alter Self at will, no spell slot required", prereqLevel: 15 },
+  { name: "Visions of Distant Realms", description: "Cast Arcane Eye at will, no spell slot required", prereqLevel: 15 },
+  { name: "Witch Sight", description: "See the true forms of shapechangers and illusion-concealed creatures within 30 ft", prereqLevel: 15 },
+];
+
+// New invocations granted at each Warlock level (total kept for reference; this is the delta)
+const WARLOCK_NEW_INVOCATIONS: Record<number, number> = { 2: 2, 5: 1, 7: 1, 9: 1, 12: 1, 15: 1, 18: 1 };
+
+const PACT_BOON_OPTIONS = [
+  { key: "Chain", name: "Pact of the Chain", icon: "🐾", description: "Gain Find Familiar. Your familiar can be an Imp, Pseudodragon, Quasit, or Sprite. It can attack via your bonus action." },
+  { key: "Blade", name: "Pact of the Blade", icon: "⚔️", description: "Summon a pact weapon as a bonus action. Proficient with it, use CHA for attacks, and it counts as magical." },
+  { key: "Tome", name: "Pact of the Tome", icon: "📖", description: "Your patron grants a Book of Shadows containing 3 cantrips from any class list." },
+];
+
+type FamiliarOption = { name: string; hp: number; maxHp: number; ac: number; description: string; special?: boolean };
+const CHAIN_FAMILIAR_TYPES: FamiliarOption[] = [
+  { name: "Imp", hp: 10, maxHp: 10, ac: 13, description: "Devil from the Nine Hells. Immune to fire/poison, resistant to cold/lightning/bludgeoning.", special: true },
+  { name: "Pseudodragon", hp: 7, maxHp: 7, ac: 13, description: "Tiny dragon with telepathy. Can share its magical senses with you.", special: true },
+  { name: "Quasit", hp: 7, maxHp: 7, ac: 13, description: "Chaotic demon that can turn invisible at will. Immune to poison.", special: true },
+  { name: "Sprite", hp: 2, maxHp: 2, ac: 15, description: "Fey archer with a heart-seeking bow. Can detect alignment and current emotional state.", special: true },
+  { name: "Cat", hp: 2, maxHp: 2, ac: 12, description: "Stealthy and perceptive, ideal for scouting." },
+  { name: "Owl", hp: 1, maxHp: 1, ac: 11, description: "Fly-by assistance and superior night vision." },
+  { name: "Raven", hp: 1, maxHp: 1, ac: 12, description: "Mimics sounds and voices. Useful for distraction and communication." },
+  { name: "Bat", hp: 1, maxHp: 1, ac: 12, description: "Blindsight via echolocation in total darkness." },
+  { name: "Hawk", hp: 1, maxHp: 1, ac: 13, description: "Keen Sight advantage on Perception, excellent for aerial scouting." },
+];
+
 // ─── Edit Character Modal ───────────────────────────────────────────────────
 
 function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClose: () => void }) {
@@ -638,6 +717,8 @@ function HPBar({ hp, maxHp, tempHp, campaignId }: { hp: number; maxHp: number; t
 function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevelUp?: (info: { newLevel: number; hitDie: number }) => void }) {
   const { data: char } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const { data: campaign } = useGetCampaign(campaignId, { query: { queryKey: getGetCampaignQueryKey(campaignId) } });
+  const updateChar = useUpdateCharacter();
+  const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
 
   if (!char) return <div className="p-4 text-muted-foreground text-sm font-serif italic">No character found.</div>;
@@ -652,6 +733,24 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const conditions = (char.conditions as string[] | null) ?? [];
   const skills = (char.skillProficiencies as string[] | null) ?? [];
   const knownSpells = (char.knownSpells as string[] | null) ?? [];
+  const invocations = (char.invocations as string[] | null) ?? [];
+  const familiar = char.familiar as { type: string; hp: number; maxHp: number; ac: number } | null | undefined;
+  const chainInvocations = invocations
+    .map(name => ELDRITCH_INVOCATIONS.find(inv => inv.name === name))
+    .filter((inv): inv is Invocation => !!inv && !!inv.chainApplies);
+
+  async function adjustFamiliarHp(delta: number) {
+    if (!familiar) return;
+    const newHp = Math.max(0, Math.min(familiar.maxHp, familiar.hp + delta));
+    if (newHp === familiar.hp) return;
+    await updateChar.mutateAsync({ campaignId, data: { familiar: { ...familiar, hp: newHp } } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function dismissFamiliar() {
+    await updateChar.mutateAsync({ campaignId, data: { familiar: null } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
 
   return (
     <div className="h-full overflow-y-auto px-4 py-4 space-y-5 scrollbar-thin">
@@ -780,6 +879,91 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
           <div className="flex flex-wrap gap-1">
             {knownSpells.map(s => <Badge key={s} variant="outline" className="text-xs border-border/50 text-muted-foreground/70 py-0">{s}</Badge>)}
           </div>
+        </div>
+      )}
+
+      {/* Eldritch Invocations */}
+      {invocations.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1.5">Eldritch Invocations</div>
+          <div className="space-y-1">
+            {invocations.map(name => {
+              const inv = ELDRITCH_INVOCATIONS.find(i => i.name === name);
+              return (
+                <div key={name} className="bg-card border border-border/50 rounded px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    {inv?.chainApplies && <span className="text-xs text-primary/70">✦</span>}
+                    <span className="text-xs font-medium text-foreground">{name}</span>
+                  </div>
+                  {inv && <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{inv.description}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Familiar (Pact of the Chain) */}
+      {familiar && (
+        <div className="bg-card border border-primary/20 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground uppercase tracking-widest">Familiar</div>
+            <button onClick={dismissFamiliar} disabled={updateChar.isPending}
+              className="text-xs text-muted-foreground/50 hover:text-destructive transition-colors">
+              Dismiss
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-primary text-base">🐾</span>
+            <div>
+              <div className="text-sm font-medium text-foreground">{familiar.type}</div>
+              <div className="text-xs text-muted-foreground">AC {familiar.ac}</div>
+            </div>
+          </div>
+          {/* Familiar HP bar */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">HP</span>
+              <span className={familiar.hp <= 0 ? "text-destructive font-bold" : familiar.hp <= Math.floor(familiar.maxHp / 2) ? "text-amber-500" : "text-green-400"}>
+                {familiar.hp} / {familiar.maxHp}
+              </span>
+            </div>
+            <div className="w-full bg-background border border-border rounded-full h-1.5 overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${familiar.hp <= 0 ? "bg-destructive" : familiar.hp <= Math.floor(familiar.maxHp / 2) ? "bg-amber-500" : "bg-green-500"}`}
+                style={{ width: `${Math.max(0, (familiar.hp / familiar.maxHp) * 100)}%` }} />
+            </div>
+            <div className="flex gap-1.5 justify-center pt-0.5">
+              {[-5, -1, +1, +5].map(delta => (
+                <button key={delta} onClick={() => adjustFamiliarHp(delta)} disabled={updateChar.isPending}
+                  className={`px-2 py-0.5 rounded border text-xs transition-all hover:bg-primary/10 ${delta < 0 ? "border-destructive/50 text-destructive/80" : "border-green-600/50 text-green-400"} disabled:opacity-40`}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Active Chain invocations */}
+          {chainInvocations.length > 0 && (
+            <div className="pt-1 border-t border-border/40 space-y-1">
+              <div className="text-xs text-muted-foreground/60 uppercase tracking-widest">Chain Invocations Active</div>
+              {chainInvocations.map(inv => (
+                <div key={inv.name} className="flex items-start gap-1.5">
+                  <span className="text-primary/70 text-xs mt-0.5">✦</span>
+                  <div>
+                    <span className="text-xs font-medium text-primary/90">{inv.name}</span>
+                    <p className="text-xs text-muted-foreground/70 leading-snug">{inv.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pact Boon (no familiar) */}
+      {char.pactBoon && !familiar && (
+        <div className="bg-card border border-border/50 rounded p-2">
+          <span className="text-xs text-muted-foreground uppercase tracking-widest">Pact Boon </span>
+          <span className="text-xs text-primary font-medium">{char.pactBoon as string}</span>
         </div>
       )}
 
@@ -919,6 +1103,9 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const [newSpells, setNewSpells] = useState<string[]>([]);
   const [newCantrips, setNewCantrips] = useState<string[]>([]);
   const [asiAlloc, setAsiAlloc] = useState<Partial<Record<typeof ASI_STAT_KEYS[number], number>>>({});
+  const [pactBoon, setPactBoon] = useState<string | null>(null);
+  const [selectedFamiliarType, setSelectedFamiliarType] = useState<string | null>(null);
+  const [newInvocations, setNewInvocations] = useState<string[]>([]);
 
   if (!char) return null;
 
@@ -945,7 +1132,24 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const isAsiLevel = ASI_LEVELS.has(newLevel);
   const totalAsiPoints = Object.values(asiAlloc).reduce((a, b) => a + (b ?? 0), 0);
   const asiDone = !isAsiLevel || totalAsiPoints === 2;
-  const canApply = hpGained !== null && spellsReady && asiDone;
+
+  // Warlock-specific
+  const isWarlockPactLevel = char.class === "Warlock" && newLevel === 3;
+  const warlockInvocationsNeeded = char.class === "Warlock" ? (WARLOCK_NEW_INVOCATIONS[newLevel] ?? 0) : 0;
+  const existingPactKey = (char.pactBoon as string | null)?.replace("Pact of the ", "") ?? null;
+  const pendingPactKey = pactBoon?.replace("Pact of the ", "") ?? existingPactKey;
+  const knownInvocSet = new Set((char.invocations as string[] | null) ?? []);
+  const availableInvocations = ELDRITCH_INVOCATIONS.filter(inv => {
+    if (knownInvocSet.has(inv.name)) return false;
+    if (inv.prereqLevel && inv.prereqLevel > newLevel) return false;
+    if (inv.prereqPact && inv.prereqPact !== pendingPactKey) return false;
+    return true;
+  });
+  const pactBoonDone = !isWarlockPactLevel || pactBoon !== null;
+  const familiarDone = !isWarlockPactLevel || pactBoon !== "Pact of the Chain" || selectedFamiliarType !== null;
+  const invocationsDone = warlockInvocationsNeeded === 0 || newInvocations.length === warlockInvocationsNeeded;
+
+  const canApply = hpGained !== null && spellsReady && asiDone && pactBoonDone && familiarDone && invocationsDone;
 
   function adjustAsi(stat: typeof ASI_STAT_KEYS[number], delta: number) {
     setAsiAlloc(prev => {
@@ -981,6 +1185,13 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
     }, 600);
   }
 
+  function toggleInvocation(name: string) {
+    setNewInvocations(prev =>
+      prev.includes(name) ? prev.filter(i => i !== name)
+        : prev.length < warlockInvocationsNeeded ? [...prev, name] : prev
+    );
+  }
+
   async function applyLevelUp() {
     if (hpGained === null) return;
     const newMaxHp = (char!.maxHp ?? 10) + hpGained;
@@ -996,6 +1207,11 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
       }
     }
 
+    const currentInvocations = (char!.invocations as string[] | null) ?? [];
+    const selectedFamiliarData = selectedFamiliarType
+      ? CHAIN_FAMILIAR_TYPES.find(f => f.name === selectedFamiliarType)
+      : null;
+
     const newProfBonus = Math.floor((newLevel - 1) / 4) + 2;
     await updateChar.mutateAsync({
       campaignId,
@@ -1004,8 +1220,18 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
         hp: newHp,
         ...(allNewSpells.length > 0 ? { knownSpells: [...currentSpells, ...allNewSpells] } : {}),
         ...asiUpdates,
-        // For manual triggers, server didn't handle level increment — we do it here
         ...(manualTrigger ? { level: newLevel, proficiencyBonus: newProfBonus } : {}),
+        // Warlock
+        ...(pactBoon ? { pactBoon } : {}),
+        ...(selectedFamiliarData ? {
+          familiar: {
+            type: selectedFamiliarData.name,
+            hp: selectedFamiliarData.maxHp,
+            maxHp: selectedFamiliarData.maxHp,
+            ac: selectedFamiliarData.ac,
+          }
+        } : {}),
+        ...(newInvocations.length > 0 ? { invocations: [...currentInvocations, ...newInvocations] } : {}),
       },
     });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
@@ -1107,6 +1333,99 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Warlock — Pact Boon Selection (level 3) */}
+          {isWarlockPactLevel && (
+            <div className="bg-background/50 border border-primary/30 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground uppercase tracking-widest">Choose Your Pact Boon</div>
+                {!pactBoonDone && <span className="text-xs text-amber-500">Required</span>}
+              </div>
+              <div className="space-y-2">
+                {PACT_BOON_OPTIONS.map(boon => {
+                  const sel = pactBoon === boon.name;
+                  return (
+                    <button key={boon.key} onClick={() => { setPactBoon(boon.name); setSelectedFamiliarType(null); }}
+                      className={`w-full text-left rounded-lg border p-3 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">{boon.icon}</span>
+                        <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{boon.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-snug">{boon.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Familiar selector when Chain is chosen */}
+              {pactBoon === "Pact of the Chain" && (
+                <div className="space-y-2 pt-1 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground uppercase tracking-widest">Choose Your Familiar</div>
+                    {!familiarDone && <span className="text-xs text-amber-500">Required</span>}
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto">
+                    {CHAIN_FAMILIAR_TYPES.map(f => {
+                      const sel = selectedFamiliarType === f.name;
+                      return (
+                        <button key={f.name} onClick={() => setSelectedFamiliarType(f.name)}
+                          className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              {f.special && <span className="text-xs text-primary/70 font-bold">✦</span>}
+                              <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{f.name}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">HP {f.maxHp} · AC {f.ac}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground/80 mt-0.5 leading-snug">{f.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground/60 italic">✦ Special Chain familiars exclusive to Warlocks</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Warlock — Eldritch Invocation Selection */}
+          {warlockInvocationsNeeded > 0 && (
+            <div className="bg-background/50 border border-border/60 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground uppercase tracking-widest">Eldritch Invocations</div>
+                <span className={`text-xs font-medium ${invocationsDone ? "text-primary" : "text-amber-500"}`}>
+                  {newInvocations.length} / {warlockInvocationsNeeded} chosen
+                </span>
+              </div>
+              {availableInvocations.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">All available invocations already known.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                  {availableInvocations.map(inv => {
+                    const sel = newInvocations.includes(inv.name);
+                    const maxed = newInvocations.length >= warlockInvocationsNeeded;
+                    return (
+                      <button key={inv.name} onClick={() => toggleInvocation(inv.name)}
+                        disabled={!sel && maxed}
+                        className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : maxed ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50"}`}>
+                        <div className="flex items-center gap-1.5">
+                          {inv.prereqPact && <span className="text-xs text-primary/70 font-bold">✦</span>}
+                          <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{inv.name}</span>
+                          {inv.prereqLevel && <span className="text-xs text-muted-foreground/60">Lvl {inv.prereqLevel}+</span>}
+                        </div>
+                        <p className="text-xs text-muted-foreground/80 mt-0.5 leading-snug">{inv.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {!invocationsDone && (
+                <p className="text-xs text-amber-500">
+                  Choose {warlockInvocationsNeeded - newInvocations.length} more invocation{warlockInvocationsNeeded - newInvocations.length !== 1 ? "s" : ""} to continue.
+                </p>
               )}
             </div>
           )}

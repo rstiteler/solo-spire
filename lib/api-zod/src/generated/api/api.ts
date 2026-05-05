@@ -90,6 +90,16 @@ export const GetCampaignResponse = zod
           spellSlotsUsed: zod.object({}).passthrough().nullish(),
           knownSpells: zod.array(zod.string()),
           features: zod.array(zod.string()),
+          pactBoon: zod.string().nullish(),
+          invocations: zod.array(zod.string()).optional(),
+          familiar: zod
+            .object({
+              type: zod.string(),
+              hp: zod.number(),
+              maxHp: zod.number(),
+              ac: zod.number(),
+            })
+            .nullish(),
           portraitUrl: zod.string().nullish(),
           portraitDescription: zod.string().nullish(),
           deathSaves: zod.object({}).passthrough().nullish(),
@@ -237,6 +247,16 @@ export const SaveCampaignBody = zod.object({
       spellSlotsUsed: zod.object({}).passthrough().nullish(),
       knownSpells: zod.array(zod.string()).optional(),
       features: zod.array(zod.string()).optional(),
+      pactBoon: zod.string().nullish(),
+      invocations: zod.array(zod.string()).optional(),
+      familiar: zod
+        .object({
+          type: zod.string(),
+          hp: zod.number(),
+          maxHp: zod.number(),
+          ac: zod.number(),
+        })
+        .nullish(),
       portraitUrl: zod.string().nullish(),
       portraitDescription: zod.string().nullish(),
       deathSaves: zod.object({}).passthrough().nullish(),
@@ -345,6 +365,16 @@ export const GetCharacterResponse = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()),
   features: zod.array(zod.string()),
+  pactBoon: zod.string().nullish(),
+  invocations: zod.array(zod.string()).optional(),
+  familiar: zod
+    .object({
+      type: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+    })
+    .nullish(),
   portraitUrl: zod.string().nullish(),
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
@@ -387,6 +417,16 @@ export const UpdateCharacterBody = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()).optional(),
   features: zod.array(zod.string()).optional(),
+  pactBoon: zod.string().nullish(),
+  invocations: zod.array(zod.string()).optional(),
+  familiar: zod
+    .object({
+      type: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+    })
+    .nullish(),
   portraitUrl: zod.string().nullish(),
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
@@ -422,6 +462,16 @@ export const UpdateCharacterResponse = zod.object({
   spellSlotsUsed: zod.object({}).passthrough().nullish(),
   knownSpells: zod.array(zod.string()),
   features: zod.array(zod.string()),
+  pactBoon: zod.string().nullish(),
+  invocations: zod.array(zod.string()).optional(),
+  familiar: zod
+    .object({
+      type: zod.string(),
+      hp: zod.number(),
+      maxHp: zod.number(),
+      ac: zod.number(),
+    })
+    .nullish(),
   portraitUrl: zod.string().nullish(),
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),

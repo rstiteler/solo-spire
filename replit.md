@@ -44,10 +44,17 @@ A full-stack solo D&D 5e companion app with an AI Dungeon Master powered by Anth
 7. **AI DM** — Claude with full system prompt tracking HP, XP, quests, inventory via structured `<STATE_UPDATE>` parsing
 8. **Auto-save** — Campaign state updated automatically on each AI response
 9. **Multi-user** — Each user sees only their own campaigns; all routes enforce auth
+10. **Level-Up Modal** — HP roll/average, spell learning, ASI (+2 points at levels 4/8/12/16/19), Warlock Pact Boon + Invocations
+11. **Warlock Mechanics** — Pact Boon (Chain/Blade/Tome) at level 3; Eldritch Invocations at levels 2/5/7/9/12/15/18 (+35 invocations with prereq filtering); Pact of the Chain familiar selection (Imp/Pseudodragon/Quasit/Sprite + 5 standard familiars) with HP bar, adjust controls, dismiss button, and Chain invocation display in CharacterPanel
 
 ## Database Schema
 
 Tables: `campaigns` (with `user_id`), `characters`, `chat_messages`, `quests`, `inventory_items`
+
+### characters extra fields (added progressively)
+- `pact_boon` (text nullable) — "Pact of the Chain/Blade/Tome" for Warlocks
+- `invocations` (jsonb string[]) — list of known Eldritch Invocation names
+- `familiar` (jsonb nullable) — `{ type, hp, maxHp, ac }` for Chain Warlocks
 
 ### inventory_items fields
 - `item_properties` (jsonb) — mechanical stats: `{ armorType, acBase, stealthDisadvantage, strengthRequirement, damage, damageType, versatileDamage, weaponProperties }`

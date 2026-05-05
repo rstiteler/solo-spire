@@ -49,13 +49,14 @@ router.put("/campaigns/:campaignId/character", async (req, res) => {
     const [existing] = await db.select().from(characters).where(eq(characters.campaignId, paramsParsed.data.campaignId));
 
     if (existing) {
-      const { spellSlots, spellSlotsUsed, deathSaves, ...rest } = bodyParsed.data;
+      const { spellSlots, spellSlotsUsed, deathSaves, familiar, ...rest } = bodyParsed.data;
       const [updated] = await db.update(characters)
         .set({
           ...rest,
           spellSlots: spellSlots as Record<string, number> | undefined,
           spellSlotsUsed: spellSlotsUsed as Record<string, number> | undefined,
           deathSaves: deathSaves as { successes: number; failures: number } | undefined,
+          ...(familiar !== undefined ? { familiar: familiar as { type: string; hp: number; maxHp: number; ac: number } | null } : {}),
           updatedAt: new Date(),
         })
         .where(eq(characters.campaignId, paramsParsed.data.campaignId))

@@ -620,6 +620,26 @@ components:
           type: array
           items:
             type: string
+        pactBoon:
+          type: string
+          nullable: true
+        invocations:
+          type: array
+          items:
+            type: string
+        familiar:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+            hp:
+              type: integer
+            maxHp:
+              type: integer
+            ac:
+              type: integer
+          required: [type, hp, maxHp, ac]
         portraitUrl:
           type: string
           nullable: true
@@ -735,6 +755,26 @@ components:
           type: array
           items:
             type: string
+        pactBoon:
+          type: string
+          nullable: true
+        invocations:
+          type: array
+          items:
+            type: string
+        familiar:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+            hp:
+              type: integer
+            maxHp:
+              type: integer
+            ac:
+              type: integer
+          required: [type, hp, maxHp, ac]
         portraitUrl:
           type: string
           nullable: true
