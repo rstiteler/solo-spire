@@ -268,10 +268,14 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities">("identity");
+  const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities" | "warlock">("identity");
   const [saving, setSaving] = useState(false);
   const [knownSpellsList, setKnownSpellsList] = useState<string[]>(() => (char?.knownSpells as string[] | null) ?? []);
   const [spellSearch, setSpellSearch] = useState("");
+  const [warlockInvocationSearch, setWarlockInvocationSearch] = useState("");
+  const [warlockPactBoon, setWarlockPactBoon] = useState<string | null>(() => (char?.pactBoon as string | null) ?? null);
+  const [warlockFamiliarType, setWarlockFamiliarType] = useState<string | null>(() => (char?.familiar as { type: string } | null)?.type ?? null);
+  const [warlockInvocations, setWarlockInvocations] = useState<string[]>(() => (char?.invocations as string[] | null) ?? []);
 
   const [form, setForm] = useState(() => {
     const features = (char?.features as string[] | null) ?? [];
@@ -327,6 +331,17 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
   async function handleSave() {
     setSaving(true);
     try {
+      const isWarlock = form.charClass === "Warlock";
+      const familiarData = isWarlock && warlockPactBoon === "Pact of the Chain" && warlockFamiliarType
+        ? (() => {
+            const existing = char?.familiar as { type: string; hp: number; maxHp: number; ac: number } | null;
+            // Keep current HP/maxHP if same familiar type, otherwise use base stats
+            if (existing && existing.type === warlockFamiliarType) return existing;
+            const base = CHAIN_FAMILIAR_TYPES.find(f => f.name === warlockFamiliarType);
+            return base ? { type: base.name, hp: base.maxHp, maxHp: base.maxHp, ac: base.ac } : null;
+          })()
+        : null;
+
       await updateCharacter.mutateAsync({
         campaignId,
         data: {
@@ -350,6 +365,11 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
           savingThrowProficiencies: form.savingThrowProficiencies,
           features: form.subclass ? [form.subclass] : [],
           knownSpells: knownSpellsList,
+          ...(isWarlock ? {
+            pactBoon: warlockPactBoon,
+            invocations: warlockInvocations,
+            familiar: familiarData,
+          } : {}),
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
@@ -391,6 +411,12 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
               {t}
             </button>
           ))}
+          {form.charClass === "Warlock" && (
+            <button onClick={() => setTab("warlock")}
+              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${tab === "warlock" ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"} ${!warlockPactBoon && (char?.level ?? 1) >= 3 ? "ring-1 ring-amber-500/50" : ""}`}>
+              Warlock {!warlockPactBoon && (char?.level ?? 1) >= 3 ? "⚠" : ""}
+            </button>
+          )}
         </div>
 
         {tab === "identity" && (
@@ -612,6 +638,137 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
                     </ul>
                   </div>
                 ))
+              )}
+            </div>
+          );
+        })()}
+
+        {tab === "warlock" && (() => {
+          const currentLevel = char?.level ?? 1;
+          const pactKey = warlockPactBoon?.replace("Pact of the ", "") ?? null;
+          const knownSet = new Set(warlockInvocations);
+          const available = ELDRITCH_INVOCATIONS.filter(inv => {
+            if (knownSet.has(inv.name)) return false;
+            if (inv.prereqLevel && inv.prereqLevel > currentLevel) return false;
+            if (inv.prereqPact && inv.prereqPact !== pactKey) return false;
+            if (warlockInvocationSearch && !inv.name.toLowerCase().includes(warlockInvocationSearch.toLowerCase())) return false;
+            return true;
+          });
+          const expectedCount = Object.entries(WARLOCK_NEW_INVOCATIONS)
+            .filter(([lvl]) => parseInt(lvl) <= currentLevel)
+            .reduce((sum, [, n]) => sum + n, 0);
+          const missingCount = Math.max(0, expectedCount - warlockInvocations.length);
+          return (
+            <div className="space-y-5">
+              {/* Pact Boon */}
+              {currentLevel >= 3 ? (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Pact Boon</div>
+                  <div className="space-y-1.5">
+                    {PACT_BOON_OPTIONS.map(boon => {
+                      const sel = warlockPactBoon === boon.name;
+                      return (
+                        <button key={boon.key}
+                          onClick={() => { setWarlockPactBoon(boon.name); if (boon.key !== "Chain") setWarlockFamiliarType(null); }}
+                          className={`w-full text-left rounded border p-2.5 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                          <div className="flex items-center gap-2">
+                            <span>{boon.icon}</span>
+                            <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{boon.name}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{boon.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/60 italic">Pact Boon is granted at level 3.</p>
+              )}
+
+              {/* Familiar selector */}
+              {warlockPactBoon === "Pact of the Chain" && (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Familiar Type</div>
+                  <div className="space-y-1 max-h-44 overflow-y-auto">
+                    {CHAIN_FAMILIAR_TYPES.map(f => {
+                      const sel = warlockFamiliarType === f.name;
+                      return (
+                        <button key={f.name} onClick={() => setWarlockFamiliarType(f.name)}
+                          className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              {f.special && <span className="text-xs text-primary/70 font-bold">✦</span>}
+                              <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{f.name}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">HP {f.maxHp} · AC {f.ac}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{f.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground/50 mt-1 italic">✦ Special Chain-only familiars. Changing type resets familiar HP to max.</p>
+                </div>
+              )}
+
+              {/* Invocations */}
+              {currentLevel >= 2 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs text-muted-foreground uppercase tracking-widest">Eldritch Invocations</div>
+                    <span className={`text-xs font-medium ${missingCount > 0 ? "text-amber-500" : "text-primary"}`}>
+                      {warlockInvocations.length} known{missingCount > 0 ? ` · ${missingCount} unchosen` : ""}
+                    </span>
+                  </div>
+
+                  {/* Known invocations */}
+                  {warlockInvocations.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {warlockInvocations.map(name => (
+                        <span key={name} className="flex items-center gap-1 px-2 py-0.5 rounded border border-primary/30 bg-primary/5 text-xs text-primary">
+                          {name}
+                          <button onClick={() => setWarlockInvocations(prev => prev.filter(i => i !== name))}
+                            className="text-primary/50 hover:text-primary ml-0.5">
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add invocations */}
+                  <Input
+                    value={warlockInvocationSearch}
+                    onChange={e => setWarlockInvocationSearch(e.target.value)}
+                    placeholder="Search invocations…"
+                    className="h-7 text-xs bg-card border-border mb-2"
+                  />
+                  {available.length === 0 ? (
+                    <p className="text-xs text-muted-foreground/60 italic">
+                      {warlockInvocationSearch ? "No matches." : "All available invocations already known."}
+                    </p>
+                  ) : (
+                    <div className="space-y-1 max-h-52 overflow-y-auto">
+                      {available.map(inv => (
+                        <button key={inv.name} onClick={() => setWarlockInvocations(prev => [...prev, inv.name])}
+                          className="w-full text-left rounded border border-border hover:border-primary/50 p-2 transition-all group">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              {inv.prereqPact && <span className="text-xs text-primary/70">✦</span>}
+                              <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">{inv.name}</span>
+                              {inv.prereqLevel && <span className="text-xs text-muted-foreground/50">Lvl {inv.prereqLevel}+</span>}
+                            </div>
+                            <Plus className="w-3 h-3 text-muted-foreground/40 group-hover:text-primary" />
+                          </div>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{inv.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {currentLevel < 2 && (
+                <p className="text-xs text-muted-foreground/60 italic">Eldritch Invocations are granted at level 2.</p>
               )}
             </div>
           );
