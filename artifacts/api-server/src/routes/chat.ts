@@ -59,10 +59,27 @@ CORE RESPONSIBILITIES:
 - Award XP for combat encounters (by challenge rating), clever roleplay, and milestone achievements.
 
 DICE ROLLING:
-- PLAYER dice rolls (ability checks, attack rolls, saving throws, skill checks): Do NOT roll these yourself. Conclude your narrative at the moment the roll is needed, then emit ONLY this self-closing tag as the final line of your response:
-  <ROLL_PROMPT dice="XdY" reason="Brief reason (e.g. Stealth check)" dc="N"/>
-  The "dc" attribute is optional — omit it for attack rolls or contested rolls. After emitting this tag, STOP. Wait for the player to roll and report back.
-- DM dice rolls (enemy attacks, enemy damage, random encounter tables, NPC saves): Roll these yourself and narrate naturally. Format: **[ROLL: 1d20+5 = 14]**
+- PLAYER dice rolls (ability checks, attack rolls, saving throws, skill checks): Do NOT roll these yourself. Conclude your narrative at the moment the roll is needed, then emit ONLY this self-closing tag as the VERY LAST LINE of your response — nothing after it:
+  <ROLL_PROMPT dice="1d20" skill="Stealth" dc="14" reason="Slip past the sleeping guard"/>
+  Attributes:
+  • dice — always "1d20" for skill checks, ability checks, saving throws, and attack rolls
+  • skill — REQUIRED: one of the 18 D&D 5e skills (Acrobatics, Animal Handling, Arcana, Athletics, Deception, History, Insight, Intimidation, Investigation, Medicine, Nature, Perception, Performance, Persuasion, Religion, Sleight of Hand, Stealth, Survival), OR a raw ability name (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma), OR an ability saving throw string like "Dexterity saving throw"
+  • dc — the Difficulty Class integer; OMIT only for attack rolls or contested checks with no fixed DC
+  • reason — short, evocative description of what the player is attempting
+  After emitting the tag, STOP completely. Do not write any more narrative. Wait for the player to roll.
+- WHEN TO CALL FOR A CHECK — call whenever the outcome is uncertain and failure has consequences:
+  • Moving silently / hiding → Stealth
+  • Spotting something hidden / detecting deception → Perception or Insight
+  • Persuading, lying to, or intimidating an NPC → Persuasion, Deception, or Intimidation
+  • Forcing open a door, climbing, jumping, grappling → Athletics or Acrobatics
+  • Searching for clues, traps, or secret doors → Perception or Investigation
+  • Recalling lore or knowledge → Arcana, History, Nature, Religion, or Medicine
+  • Attacking a monster in combat → attack roll (Strength or Dexterity check)
+  • Resisting a spell or hazard → appropriate saving throw (Dexterity, Constitution, Wisdom, etc.)
+  • Picking a lock or pocket → Sleight of Hand
+  • Handling or calming an animal → Animal Handling
+  • Do NOT skip a check just because success seems likely — let the dice and modifiers tell the story.
+- DM dice rolls (enemy attacks, enemy damage, random tables, NPC saves): Roll these yourself and narrate naturally. Format: **[ROLL: 1d20+5 = 14]**
 - NEVER auto-roll dice the player should roll.
 
 STATE TRACKING:
@@ -258,15 +275,21 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
     }
 
     // Parse ROLL_PROMPT tag
-    let rollPrompt: { dice: string; reason: string; dc?: number } | null = null;
+    let rollPrompt: { dice: string; skill?: string; reason: string; dc?: number } | null = null;
     const rollPromptMatch = fullResponse.match(/<ROLL_PROMPT\s([^/]*?)\/>/);
     if (rollPromptMatch) {
       const attrs = rollPromptMatch[1];
       const diceM = attrs.match(/dice="([^"]+)"/);
       const reasonM = attrs.match(/reason="([^"]+)"/);
       const dcM = attrs.match(/dc="(\d+)"/);
+      const skillM = attrs.match(/skill="([^"]+)"/);
       if (diceM && reasonM) {
-        rollPrompt = { dice: diceM[1], reason: reasonM[1], ...(dcM ? { dc: parseInt(dcM[1]) } : {}) };
+        rollPrompt = {
+          dice: diceM[1],
+          reason: reasonM[1],
+          ...(skillM ? { skill: skillM[1] } : {}),
+          ...(dcM ? { dc: parseInt(dcM[1]) } : {}),
+        };
         cleanResponse = cleanResponse.replace(rollPromptMatch[0], "").trim();
       }
     }

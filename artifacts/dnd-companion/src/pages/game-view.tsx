@@ -51,6 +51,53 @@ const ABILITY_KEYS = ["strength", "dexterity", "constitution", "intelligence", "
 const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
 const DICE_FACES = [4, 6, 8, 10, 12, 20, 100] as const;
 
+const SKILL_ABILITY_MAP: Record<string, string> = {
+  Acrobatics: "dexterity", "Animal Handling": "wisdom", Arcana: "intelligence",
+  Athletics: "strength", Deception: "charisma", History: "intelligence",
+  Insight: "wisdom", Intimidation: "charisma", Investigation: "intelligence",
+  Medicine: "wisdom", Nature: "intelligence", Perception: "wisdom",
+  Performance: "charisma", Persuasion: "charisma", Religion: "intelligence",
+  "Sleight of Hand": "dexterity", Stealth: "dexterity", Survival: "wisdom",
+};
+const ABILITY_TO_STAT: Record<string, string> = {
+  Strength: "strength", Dexterity: "dexterity", Constitution: "constitution",
+  Intelligence: "intelligence", Wisdom: "wisdom", Charisma: "charisma",
+};
+
+function getCheckModifier(
+  skill: string | undefined,
+  char: { strength?: number | null; dexterity?: number | null; constitution?: number | null; intelligence?: number | null; wisdom?: number | null; charisma?: number | null; proficiencyBonus?: number | null; skillProficiencies?: unknown; savingThrowProficiencies?: unknown },
+): { totalMod: number; label: string; isProficient: boolean } {
+  if (!skill) return { totalMod: 0, label: "", isProficient: false };
+  const profBonus = char.proficiencyBonus ?? 2;
+  const skillProfs = (char.skillProficiencies as string[] | null) ?? [];
+  const saveProfs = (char.savingThrowProficiencies as string[] | null) ?? [];
+
+  const getRawMod = (key: string) => abilityMod((char as Record<string, number>)[key] ?? 10);
+
+  // 18 D&D skills
+  if (SKILL_ABILITY_MAP[skill]) {
+    const statKey = SKILL_ABILITY_MAP[skill];
+    const isProficient = skillProfs.includes(skill);
+    const totalMod = getRawMod(statKey) + (isProficient ? profBonus : 0);
+    return { totalMod, label: skill, isProficient };
+  }
+  // Saving throw (e.g. "Dexterity saving throw", "Wisdom saving throw")
+  for (const [abilityName, statKey] of Object.entries(ABILITY_TO_STAT)) {
+    if (skill.toLowerCase().includes(abilityName.toLowerCase()) && skill.toLowerCase().includes("saving")) {
+      const isProficient = saveProfs.includes(abilityName);
+      const totalMod = getRawMod(statKey) + (isProficient ? profBonus : 0);
+      return { totalMod, label: skill, isProficient };
+    }
+  }
+  // Raw ability check (e.g. "Strength", "Charisma")
+  if (ABILITY_TO_STAT[skill]) {
+    const totalMod = getRawMod(ABILITY_TO_STAT[skill]);
+    return { totalMod, label: `${skill} check`, isProficient: false };
+  }
+  return { totalMod: 0, label: skill, isProficient: false };
+}
+
 const CLASS_LEVEL_FEATURES: Record<string, Record<number, string[]>> = {
   Fighter: {
     1: ["Fighting Style — choose a combat specialty (Archery, Defense, Dueling, etc.)", "Second Wind — use a bonus action to regain 1d10+level HP once per short rest", "Proficiency with all armor, shields, simple and martial weapons"],
@@ -2452,6 +2499,7 @@ export default function GameView() {
 
   const { data: campaign } = useGetCampaign(campaignId, { query: { queryKey: getGetCampaignQueryKey(campaignId) } });
   const { data: messages = [], isLoading: messagesLoading } = useListMessages(campaignId, { query: { queryKey: getListMessagesQueryKey(campaignId) } });
+  const { data: charForRolls } = useGetCharacter(campaignId, { query: { queryKey: getGetCharacterQueryKey(campaignId) } });
   const saveCampaign = useSaveCampaign();
 
   const [input, setInput] = useState("");
@@ -2461,7 +2509,7 @@ export default function GameView() {
   const [showDice, setShowDice] = useState(false);
   const [mobileTab, setMobileTab] = useState<"character" | "chat" | "sidebar">("chat");
   const [pendingLevelUp, setPendingLevelUp] = useState<{ newLevel: number; hitDie: number; manual?: boolean } | null>(null);
-  const [pendingRollPrompt, setPendingRollPrompt] = useState<{ dice: string; reason: string; dc?: number } | null>(null);
+  const [pendingRollPrompt, setPendingRollPrompt] = useState<{ dice: string; skill?: string; reason: string; dc?: number } | null>(null);
   const [pendingLootOffer, setPendingLootOffer] = useState<Array<{ name: string; itemType: string; quantity?: number; description?: string }> | null>(null);
   type EditableItem = { id: number; name: string; itemType: string; quantity: number; description: string | null; isEquipped: boolean; itemProperties: unknown };
   const [editingItem, setEditingItem] = useState<EditableItem | null>(null);
@@ -2478,11 +2526,25 @@ export default function GameView() {
 
   async function handleRollPrompt() {
     if (!pendingRollPrompt || rollDiceForPrompt.isPending) return;
-    const result = await rollDiceForPrompt.mutateAsync({ data: { expression: pendingRollPrompt.dice } });
-    const roll: DiceRoll = { expression: result.expression, label: pendingRollPrompt.reason, total: result.total, rolls: result.rolls, modifier: result.modifier, details: result.details };
-    setPendingRolls(prev => [...prev, roll]);
+    const { totalMod } = charForRolls
+      ? getCheckModifier(pendingRollPrompt.skill, charForRolls)
+      : { totalMod: 0 };
+    const expression = totalMod !== 0
+      ? `1d20${totalMod > 0 ? `+${totalMod}` : `${totalMod}`}`
+      : "1d20";
+    const result = await rollDiceForPrompt.mutateAsync({ data: { expression } });
+    const dcNote = pendingRollPrompt.dc ? ` (DC ${pendingRollPrompt.dc})` : "";
+    const roll: DiceRoll = {
+      expression: result.expression,
+      label: `${pendingRollPrompt.reason}${dcNote}`,
+      total: result.total,
+      rolls: result.rolls,
+      modifier: result.modifier,
+      details: result.details,
+    };
     setPendingRollPrompt(null);
-    setShowDice(true);
+    // Auto-send the roll result immediately — player doesn't need to press Send
+    await sendMessageWithRolls([roll]);
   }
 
   async function addLootItem(item: { name: string; itemType: string; quantity?: number; description?: string }, index: number) {
@@ -2526,21 +2588,16 @@ export default function GameView() {
     toast({ title: "All loot added to inventory." });
   }
 
-  const sendMessage = useCallback(async () => {
-    if ((!input.trim() && pendingRolls.length === 0) || streaming) return;
-    const msg = input.trim();
-    setInput("");
-    const rolls = [...pendingRolls];
-    setPendingRolls([]);
-    setPendingRollPrompt(null);
+  // Core SSE sender — takes explicit content + rolls, used by both sendMessage and handleRollPrompt
+  const sendMessageWithRolls = useCallback(async (rolls: DiceRoll[], content = "") => {
+    if (streaming) return;
     setStreaming(true);
     setStreamingContent("");
-
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}api/campaigns/${campaignId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: msg || "(the player rolled dice)", diceRolls: rolls.length > 0 ? rolls : undefined }),
+        body: JSON.stringify({ content: content || "(the player rolled dice)", diceRolls: rolls.length > 0 ? rolls : undefined }),
       });
       if (!response.ok) throw new Error("Failed to send message");
 
@@ -2594,7 +2651,17 @@ export default function GameView() {
       setStreaming(false);
       setStreamingContent("");
     }
-  }, [input, pendingRolls, streaming, campaignId, queryClient, toast]);
+  }, [streaming, campaignId, queryClient, toast]);
+
+  const sendMessage = useCallback(async () => {
+    if ((!input.trim() && pendingRolls.length === 0) || streaming) return;
+    const msg = input.trim();
+    setInput("");
+    const rolls = [...pendingRolls];
+    setPendingRolls([]);
+    setPendingRollPrompt(null);
+    await sendMessageWithRolls(rolls, msg);
+  }, [input, pendingRolls, streaming, sendMessageWithRolls]);
 
   async function handleSave() {
     await saveCampaign.mutateAsync({ id: campaignId, data: {} });
@@ -2662,25 +2729,46 @@ export default function GameView() {
               </div>
             )}
             {/* Roll Prompt Banner */}
-            {pendingRollPrompt && !streaming && (
-              <div className="border border-primary/50 bg-primary/5 rounded-lg p-3 flex items-start gap-3 animate-in fade-in duration-300">
-                <Dices className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5 font-medium">Roll Needed</div>
-                  <div className="text-sm font-serif text-foreground leading-snug">{pendingRollPrompt.reason}</div>
-                  {pendingRollPrompt.dc && (
-                    <div className="text-xs text-muted-foreground/70 mt-0.5">Difficulty Class: {pendingRollPrompt.dc}</div>
-                  )}
+            {pendingRollPrompt && !streaming && (() => {
+              const { totalMod, isProficient } = charForRolls
+                ? getCheckModifier(pendingRollPrompt.skill, charForRolls)
+                : { totalMod: 0, isProficient: false };
+              const modDisplay = totalMod >= 0 ? `+${totalMod}` : String(totalMod);
+              const rollExpr = `1d20${totalMod !== 0 ? modDisplay : ""}`;
+              return (
+                <div className="border-2 border-primary/60 bg-primary/8 rounded-lg p-3.5 animate-in fade-in duration-300 shadow-[0_0_12px_rgba(var(--primary)/0.15)]">
+                  <div className="flex items-start gap-3">
+                    <Dices className="w-5 h-5 text-primary flex-shrink-0 mt-0.5 animate-pulse" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <div className="text-xs text-primary/80 uppercase tracking-wider font-semibold">Roll Required</div>
+                        {pendingRollPrompt.skill && (
+                          <div className="text-xs bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">{pendingRollPrompt.skill}</div>
+                        )}
+                        {pendingRollPrompt.dc && (
+                          <div className="text-xs text-muted-foreground bg-card border border-border px-1.5 py-0.5 rounded">DC {pendingRollPrompt.dc}</div>
+                        )}
+                      </div>
+                      <div className="text-sm font-serif text-foreground leading-snug">{pendingRollPrompt.reason}</div>
+                      {charForRolls && pendingRollPrompt.skill && (
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                          <span>Your modifier: <span className={`font-bold ${totalMod >= 0 ? "text-green-400" : "text-red-400"}`}>{modDisplay}</span></span>
+                          {isProficient && <span className="text-primary/70 italic">proficient</span>}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleRollPrompt}
+                      disabled={rollDiceForPrompt.isPending}
+                      className="flex-shrink-0 px-4 py-2 rounded-lg border-2 border-primary bg-primary/15 text-primary hover:bg-primary/30 font-bold font-serif transition-all disabled:opacity-50 flex flex-col items-center gap-0.5 min-w-[72px]">
+                      <Dices className="w-4 h-4" />
+                      <span className="text-xs leading-none">{rollExpr}</span>
+                      <span className="text-[10px] text-primary/60 leading-none">& Send</span>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={handleRollPrompt}
-                  disabled={rollDiceForPrompt.isPending}
-                  className="flex-shrink-0 px-3 py-1.5 rounded border border-primary bg-primary/10 text-primary hover:bg-primary/25 text-sm font-bold font-serif transition-all disabled:opacity-50 flex items-center gap-1.5">
-                  <Dices className="w-3.5 h-3.5" />
-                  Roll {pendingRollPrompt.dice}
-                </button>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Loot Offer Panel */}
             {pendingLootOffer && pendingLootOffer.length > 0 && !streaming && (
