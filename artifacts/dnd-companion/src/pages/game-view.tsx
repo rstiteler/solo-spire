@@ -1134,24 +1134,37 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
 
 // ─── Dice Tray ─────────────────────────────────────────────────────────────
 
-function DiceTray({ onRoll }: { onRoll: (roll: DiceRoll) => void }) {
-  const rollDice = useRollDice();
+type DiceTrayChar = {
+  strength?: number | null; dexterity?: number | null; constitution?: number | null;
+  intelligence?: number | null; wisdom?: number | null; charisma?: number | null;
+  proficiencyBonus?: number | null; skillProficiencies?: unknown; savingThrowProficiencies?: unknown;
+};
+
+function DiceTray({ onRoll, charData }: { onRoll: (roll: DiceRoll) => void; charData?: DiceTrayChar | null }) {
+  const rollDiceApi = useRollDice();
   const [rolling, setRolling] = useState<number | null>(null);
   const [displayVal, setDisplayVal] = useState(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pendingD20, setPendingD20] = useState<DiceRoll | null>(null);
 
   async function handleRoll(sides: number) {
+    if (pendingD20) setPendingD20(null);
     setRolling(sides);
     setDisplayVal(Math.ceil(Math.random() * sides));
     intervalRef.current = setInterval(() => {
       setDisplayVal(Math.ceil(Math.random() * sides));
     }, 70);
     try {
-      const result = await rollDice.mutateAsync({ data: { expression: `1d${sides}` } });
+      const result = await rollDiceApi.mutateAsync({ data: { expression: `1d${sides}` } });
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
       setDisplayVal(result.total);
-      onRoll({ expression: result.expression, label: result.label ?? null, total: result.total, rolls: result.rolls, modifier: result.modifier, details: result.details });
+      const roll: DiceRoll = { expression: result.expression, label: result.label ?? null, total: result.total, rolls: result.rolls, modifier: result.modifier, details: result.details };
+      if (sides === 20 && charData) {
+        setPendingD20(roll);
+      } else {
+        onRoll(roll);
+      }
       await new Promise(r => setTimeout(r, 350));
     } finally {
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -1159,17 +1172,107 @@ function DiceTray({ onRoll }: { onRoll: (roll: DiceRoll) => void }) {
     }
   }
 
+  function applyChoice(skillKey: string | null) {
+    if (!pendingD20) return;
+    if (!skillKey || !charData) {
+      onRoll(pendingD20);
+      setPendingD20(null);
+      return;
+    }
+    const { totalMod, label } = getCheckModifier(skillKey, charData);
+    const natural = pendingD20.rolls[0];
+    const newTotal = natural + totalMod;
+    const sign = totalMod >= 0 ? `+${totalMod}` : `${totalMod}`;
+    const enhanced: DiceRoll = {
+      ...pendingD20,
+      total: newTotal,
+      label,
+      modifier: totalMod,
+      expression: totalMod !== 0 ? `1d20${sign}` : "1d20",
+      details: totalMod !== 0 ? `[${natural}] ${sign}` : `[${natural}]`,
+    };
+    onRoll(enhanced);
+    setPendingD20(null);
+  }
+
+  // Pre-compute all modifiers so they appear instantly in the picker
+  const skillChoices = charData
+    ? Object.keys(SKILL_ABILITY_MAP).map(skill => {
+        const { totalMod, isProficient } = getCheckModifier(skill, charData);
+        const ability = SKILL_ABILITY_MAP[skill].slice(0, 3).toUpperCase();
+        return { key: skill, name: skill, ability, mod: totalMod, isProficient };
+      })
+    : [];
+  const saveChoices = charData
+    ? Object.entries(ABILITY_TO_STAT).map(([abilityName]) => {
+        const saveKey = `${abilityName} saving throw`;
+        const { totalMod, isProficient } = getCheckModifier(saveKey, charData);
+        return { key: saveKey, name: abilityName.slice(0, 3).toUpperCase(), mod: totalMod, isProficient };
+      })
+    : [];
+
   return (
-    <div className="flex flex-wrap gap-2 items-center">
-      {DICE_FACES.map(d => (
-        <button key={d} data-testid={`button-roll-d${d}`} onClick={() => handleRoll(d)} disabled={rolling !== null}
-          className={`relative w-10 h-10 rounded border font-serif font-bold transition-all flex items-center justify-center ${rolling === d ? "border-primary bg-primary/20 text-primary shadow-[0_0_8px_rgba(var(--primary)/0.4)]" : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"} disabled:opacity-50`}>
-          {rolling === d
-            ? <span className="text-base font-black tabular-nums leading-none">{displayVal}</span>
-            : <span className="text-xs">{`d${d}`}</span>
-          }
-        </button>
-      ))}
+    <div className="space-y-2">
+      {/* Modifier picker — shown after d20 roll */}
+      {pendingD20 && (
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 space-y-2.5 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-serif text-primary">
+              Rolled <span className="font-black text-sm">{pendingD20.rolls[0]}</span> — add modifier?
+            </span>
+            <button onClick={() => applyChoice(null)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded border border-border/50 hover:border-border flex-shrink-0">
+              Raw / No modifier
+            </button>
+          </div>
+
+          <div>
+            <div className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-1.5">Skill Checks</div>
+            <div className="flex flex-wrap gap-1">
+              {skillChoices.map(s => (
+                <button key={s.key} onClick={() => applyChoice(s.key)}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-border/60 bg-background hover:border-primary/60 hover:bg-primary/10 transition-all group">
+                  <span className="text-[11px] text-muted-foreground group-hover:text-foreground">{s.name}</span>
+                  <span className="text-[9px] text-muted-foreground/40">{s.ability}</span>
+                  {s.isProficient && <span className="text-primary/70 text-[9px] leading-none">★</span>}
+                  <span className={`text-[11px] font-bold ${s.mod >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {s.mod >= 0 ? `+${s.mod}` : s.mod}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-1.5">Saving Throws</div>
+            <div className="flex flex-wrap gap-1">
+              {saveChoices.map(s => (
+                <button key={s.key} onClick={() => applyChoice(s.key)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded border border-border/60 bg-background hover:border-primary/60 hover:bg-primary/10 transition-all group">
+                  <span className="text-[11px] text-muted-foreground group-hover:text-foreground">{s.name} Save</span>
+                  {s.isProficient && <span className="text-primary/70 text-[9px] leading-none">★</span>}
+                  <span className={`text-[11px] font-bold ${s.mod >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {s.mod >= 0 ? `+${s.mod}` : s.mod}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dice buttons */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {DICE_FACES.map(d => (
+          <button key={d} data-testid={`button-roll-d${d}`} onClick={() => handleRoll(d)} disabled={rolling !== null}
+            className={`relative w-10 h-10 rounded border font-serif font-bold transition-all flex items-center justify-center ${rolling === d ? "border-primary bg-primary/20 text-primary shadow-[0_0_8px_rgba(var(--primary)/0.4)]" : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"} disabled:opacity-50`}>
+            {rolling === d
+              ? <span className="text-base font-black tabular-nums leading-none">{displayVal}</span>
+              : <span className="text-xs">{`d${d}`}</span>
+            }
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -3041,7 +3144,7 @@ export default function GameView() {
 
           {/* Input area */}
           <div className="border-t border-border p-3 space-y-2 flex-shrink-0">
-            {showDice && <DiceTray onRoll={handleDiceRoll} />}
+            {showDice && <DiceTray onRoll={handleDiceRoll} charData={charForRolls} />}
             <div className="flex gap-2">
               <button onClick={() => setShowDice(s => !s)} data-testid="button-toggle-dice"
                 className={`flex-shrink-0 px-3 py-2 rounded border text-xs transition-all ${showDice ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"}`}>
