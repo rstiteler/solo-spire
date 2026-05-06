@@ -117,6 +117,17 @@ export const GetCampaignResponse = zod
           portraitDescription: zod.string().nullish(),
           deathSaves: zod.object({}).passthrough().nullish(),
           conditions: zod.array(zod.string()),
+          classResources: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                current: zod.number(),
+                max: zod.number(),
+                rechargeOn: zod.string(),
+              }),
+            )
+            .nullish(),
           createdAt: zod.coerce.date(),
           updatedAt: zod.coerce.date(),
         })
@@ -287,6 +298,17 @@ export const SaveCampaignBody = zod.object({
       portraitDescription: zod.string().nullish(),
       deathSaves: zod.object({}).passthrough().nullish(),
       conditions: zod.array(zod.string()).optional(),
+      classResources: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            name: zod.string(),
+            current: zod.number(),
+            max: zod.number(),
+            rechargeOn: zod.string(),
+          }),
+        )
+        .nullish(),
     })
     .nullish(),
 });
@@ -418,6 +440,17 @@ export const GetCharacterResponse = zod.object({
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
   conditions: zod.array(zod.string()),
+  classResources: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+        current: zod.number(),
+        max: zod.number(),
+        rechargeOn: zod.string(),
+      }),
+    )
+    .nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -483,6 +516,17 @@ export const UpdateCharacterBody = zod.object({
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
   conditions: zod.array(zod.string()).optional(),
+  classResources: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+        current: zod.number(),
+        max: zod.number(),
+        rechargeOn: zod.string(),
+      }),
+    )
+    .nullish(),
 });
 
 export const UpdateCharacterResponse = zod.object({
@@ -541,6 +585,17 @@ export const UpdateCharacterResponse = zod.object({
   portraitDescription: zod.string().nullish(),
   deathSaves: zod.object({}).passthrough().nullish(),
   conditions: zod.array(zod.string()),
+  classResources: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+        current: zod.number(),
+        max: zod.number(),
+        rechargeOn: zod.string(),
+      }),
+    )
+    .nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

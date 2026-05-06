@@ -678,6 +678,23 @@ components:
           type: array
           items:
             type: string
+        classResources:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              current:
+                type: integer
+              max:
+                type: integer
+              rechargeOn:
+                type: string
+            required: [id, name, current, max, rechargeOn]
         createdAt:
           type: string
           format: date-time
@@ -838,6 +855,23 @@ components:
           type: array
           items:
             type: string
+        classResources:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              current:
+                type: integer
+              max:
+                type: integer
+              rechargeOn:
+                type: string
+            required: [id, name, current, max, rechargeOn]
 
     GeneratePortraitBody:
       type: object

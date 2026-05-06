@@ -584,6 +584,50 @@ export default function CampaignNew() {
           spellSlotsUsed: selectedClass?.spellSlots ? Object.fromEntries(Object.keys(selectedClass.spellSlots).map(k => [k, 0])) : undefined,
           subclass: form.selectedSubclass || null,
           features: form.selectedSubclass ? [form.selectedSubclass] : [],
+          classResources: (() => {
+            const charClass = form.class || "Fighter";
+            const subclass = form.selectedSubclass || null;
+            const chaMod = Math.floor(((finalStats.charisma ?? 10) - 10) / 2);
+            const sub = (subclass ?? "").toLowerCase();
+            const level = 1;
+            type CR = { id: string; name: string; current: number; max: number; rechargeOn: string };
+            const r: CR[] = [];
+            switch (charClass) {
+              case "Barbarian":
+                r.push({ id: "rage", name: "Rage", current: 2, max: 2, rechargeOn: "long" });
+                break;
+              case "Bard": {
+                const biMax = Math.max(1, chaMod);
+                r.push({ id: "bardic_inspiration", name: "Bardic Inspiration", current: biMax, max: biMax, rechargeOn: "long" });
+                break;
+              }
+              case "Cleric":
+                r.push({ id: "channel_divinity", name: "Channel Divinity", current: 1, max: 1, rechargeOn: "short" });
+                break;
+              case "Druid":
+                r.push({ id: "wild_shape", name: "Wild Shape", current: 2, max: 2, rechargeOn: "short" });
+                break;
+              case "Fighter":
+                r.push({ id: "second_wind", name: "Second Wind", current: 1, max: 1, rechargeOn: "short" });
+                r.push({ id: "action_surge", name: "Action Surge", current: 1, max: 1, rechargeOn: "short" });
+                if (sub.includes("battle master"))
+                  r.push({ id: "superiority_dice", name: "Superiority Dice", current: 4, max: 4, rechargeOn: "short" });
+                break;
+              case "Monk":
+                r.push({ id: "ki_points", name: "Ki Points", current: level, max: level, rechargeOn: "short" });
+                break;
+              case "Paladin": {
+                r.push({ id: "lay_on_hands", name: "Lay on Hands", current: 5, max: 5, rechargeOn: "long" });
+                const dsMax = Math.max(1, 1 + chaMod);
+                r.push({ id: "divine_sense", name: "Divine Sense", current: dsMax, max: dsMax, rechargeOn: "long" });
+                break;
+              }
+              case "Wizard":
+                r.push({ id: "arcane_recovery", name: "Arcane Recovery", current: 1, max: 1, rechargeOn: "long" });
+                break;
+            }
+            return r;
+          })(),
         },
       });
 

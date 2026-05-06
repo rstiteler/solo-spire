@@ -98,6 +98,90 @@ function getCheckModifier(
   return { totalMod: 0, label: skill, isProficient: false };
 }
 
+// ─── Class Resource Definitions ─────────────────────────────────────────────
+
+type ClassResource = { id: string; name: string; current: number; max: number; rechargeOn: "short" | "long" };
+
+function getClassResources(
+  charClass: string,
+  level: number,
+  subclass: string | null,
+  charData: { charisma?: number | null },
+  existing: ClassResource[] = [],
+): ClassResource[] {
+  const chaMod = abilityMod(charData.charisma ?? 10);
+  const keep = (id: string, newMax: number): number => {
+    const r = existing.find(x => x.id === id);
+    return r !== undefined ? Math.min(r.current, newMax) : newMax;
+  };
+  const sub = (subclass ?? "").toLowerCase();
+  const res: ClassResource[] = [];
+
+  switch (charClass) {
+    case "Barbarian": {
+      const rageMax = level >= 20 ? 99 : level >= 17 ? 6 : level >= 12 ? 5 : level >= 6 ? 4 : level >= 3 ? 3 : 2;
+      res.push({ id: "rage", name: "Rage", current: keep("rage", rageMax), max: rageMax, rechargeOn: "long" });
+      if (level >= 3 && sub.includes("berserker"))
+        res.push({ id: "frenzy", name: "Frenzy", current: keep("frenzy", 1), max: 1, rechargeOn: "long" });
+      break;
+    }
+    case "Bard": {
+      const biMax = Math.max(1, chaMod);
+      res.push({ id: "bardic_inspiration", name: "Bardic Inspiration", current: keep("bardic_inspiration", biMax), max: biMax, rechargeOn: level >= 5 ? "short" : "long" });
+      break;
+    }
+    case "Cleric": {
+      const cdMax = level >= 18 ? 3 : level >= 6 ? 2 : 1;
+      res.push({ id: "channel_divinity", name: "Channel Divinity", current: keep("channel_divinity", cdMax), max: cdMax, rechargeOn: "short" });
+      if (level >= 10)
+        res.push({ id: "divine_intervention", name: "Divine Intervention", current: keep("divine_intervention", 1), max: 1, rechargeOn: "long" });
+      break;
+    }
+    case "Druid":
+      res.push({ id: "wild_shape", name: "Wild Shape", current: keep("wild_shape", 2), max: 2, rechargeOn: "short" });
+      break;
+    case "Fighter": {
+      res.push({ id: "second_wind", name: "Second Wind", current: keep("second_wind", 1), max: 1, rechargeOn: "short" });
+      const asMax = level >= 17 ? 2 : 1;
+      res.push({ id: "action_surge", name: "Action Surge", current: keep("action_surge", asMax), max: asMax, rechargeOn: "short" });
+      if (level >= 9) {
+        const indMax = level >= 17 ? 3 : level >= 13 ? 2 : 1;
+        res.push({ id: "indomitable", name: "Indomitable", current: keep("indomitable", indMax), max: indMax, rechargeOn: "long" });
+      }
+      if (level >= 3 && sub.includes("battle master")) {
+        const sdMax = level >= 15 ? 6 : level >= 7 ? 5 : 4;
+        res.push({ id: "superiority_dice", name: "Superiority Dice", current: keep("superiority_dice", sdMax), max: sdMax, rechargeOn: "short" });
+      }
+      break;
+    }
+    case "Monk":
+      res.push({ id: "ki_points", name: "Ki Points", current: keep("ki_points", level), max: level, rechargeOn: "short" });
+      break;
+    case "Paladin": {
+      const lohMax = level * 5;
+      res.push({ id: "lay_on_hands", name: "Lay on Hands", current: keep("lay_on_hands", lohMax), max: lohMax, rechargeOn: "long" });
+      const dsMax = Math.max(1, 1 + chaMod);
+      res.push({ id: "divine_sense", name: "Divine Sense", current: keep("divine_sense", dsMax), max: dsMax, rechargeOn: "long" });
+      if (level >= 3) {
+        const cdMax = level >= 6 ? 2 : 1;
+        res.push({ id: "channel_divinity", name: "Channel Divinity", current: keep("channel_divinity", cdMax), max: cdMax, rechargeOn: "short" });
+      }
+      break;
+    }
+    case "Sorcerer":
+      if (level >= 2)
+        res.push({ id: "sorcery_points", name: "Sorcery Points", current: keep("sorcery_points", level), max: level, rechargeOn: "long" });
+      if (sub.includes("wild magic"))
+        res.push({ id: "tides_of_chaos", name: "Tides of Chaos", current: keep("tides_of_chaos", 1), max: 1, rechargeOn: "long" });
+      break;
+    case "Wizard":
+      res.push({ id: "arcane_recovery", name: "Arcane Recovery", current: keep("arcane_recovery", 1), max: 1, rechargeOn: "long" });
+      break;
+    // Warlock: short-rest slots tracked via spellSlots already; Ranger/Rogue have no distinct pools
+  }
+  return res;
+}
+
 const CLASS_LEVEL_FEATURES: Record<string, Record<number, string[]>> = {
   Fighter: {
     1: ["Fighting Style — choose a combat specialty (Archery, Defense, Dueling, etc.)", "Second Wind — use a bonus action to regain 1d10+level HP once per short rest", "Proficiency with all armor, shields, simple and martial weapons"],
@@ -1172,6 +1256,49 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
     : (companion?.damage ?? "");
   const companionNeedsRecalc = !!(primalEntry && companion && companion.maxHp !== companionMaxHp);
 
+  const classResources = (char.classResources as ClassResource[] | null) ?? [];
+  const charSubclass = (char.subclass ?? null) || ((char.features as string[] | null)?.[0] ?? null);
+
+  // Auto-initialize resources for pre-existing characters that have none
+  useEffect(() => {
+    if (!char || classResources.length > 0) return;
+    const init = getClassResources(char.class, char.level ?? 1, charSubclass, { charisma: char.charisma }, []);
+    if (init.length === 0) return;
+    updateChar.mutateAsync({ campaignId, data: { classResources: init } })
+      .then(() => queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) }))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [char?.id]);
+
+  async function setResourceCurrent(id: string, value: number) {
+    const updated = classResources.map(r => r.id === id ? { ...r, current: Math.max(0, Math.min(r.max, value)) } : r);
+    await updateChar.mutateAsync({ campaignId, data: { classResources: updated } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function performShortRest() {
+    const updated = classResources.map(r => r.rechargeOn === "short" ? { ...r, current: r.max } : r);
+    await updateChar.mutateAsync({ campaignId, data: { classResources: updated } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function performLongRest() {
+    if (!char) return;
+    const updated = classResources.map(r => ({ ...r, current: r.max }));
+    const slots = (char.spellSlots as Record<string, number> | null) ?? {};
+    const resetUsed = Object.fromEntries(Object.keys(slots).map(k => [k, 0]));
+    await updateChar.mutateAsync({
+      campaignId,
+      data: {
+        hp: char.maxHp ?? 10,
+        tempHp: 0,
+        classResources: updated,
+        ...(Object.keys(slots).length > 0 ? { spellSlotsUsed: resetUsed } : {}),
+      },
+    });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
   async function adjustFamiliarHp(delta: number) {
     if (!familiar) return;
     const newHp = Math.max(0, Math.min(familiar.maxHp, familiar.hp + delta));
@@ -1516,10 +1643,83 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
         </div>
       )}
 
+      {/* Class Resources */}
+      {classResources.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Class Resources</div>
+          <div className="space-y-2">
+            {classResources.map(r => {
+              const useDots = r.max <= 10 && r.max !== 99;
+              const isEmpty = r.current === 0;
+              return (
+                <div key={r.id} className={`bg-card border rounded-lg p-2.5 transition-colors ${isEmpty ? "border-destructive/30 opacity-60" : "border-border"}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-foreground">{r.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground/55 bg-background border border-border/40 px-1 py-0.5 rounded">
+                        {r.rechargeOn === "short" ? "⚡ Short" : "🌙 Long"}
+                      </span>
+                      <span className={`text-xs font-bold ${isEmpty ? "text-destructive" : "text-primary"}`}>
+                        {r.current}/{r.max === 99 ? "∞" : r.max}
+                      </span>
+                    </div>
+                  </div>
+                  {useDots ? (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {Array.from({ length: r.max }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setResourceCurrent(r.id, i < r.current ? i : i + 1)}
+                          disabled={updateChar.isPending}
+                          title={i < r.current ? "Mark as used" : "Restore"}
+                          className={`w-4 h-4 rounded-full border transition-all disabled:opacity-40 ${
+                            i < r.current
+                              ? "bg-primary border-primary hover:bg-primary/60 hover:border-primary/60"
+                              : "border-border/60 hover:border-primary/50 hover:bg-primary/10"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      {[-5, -1].map(d => (
+                        <button key={d} onClick={() => setResourceCurrent(r.id, r.current + d)} disabled={updateChar.isPending}
+                          className="px-1.5 py-0.5 rounded border border-destructive/40 text-destructive/70 text-xs hover:bg-destructive/10 transition-colors disabled:opacity-40">{d}</button>
+                      ))}
+                      <div className={`flex-1 text-center text-sm font-bold font-serif ${isEmpty ? "text-destructive" : "text-primary"}`}>{r.current}</div>
+                      {[1, 5].map(d => (
+                        <button key={d} onClick={() => setResourceCurrent(r.id, r.current + d)} disabled={updateChar.isPending}
+                          className="px-1.5 py-0.5 rounded border border-green-600/40 text-green-500 text-xs hover:bg-green-600/10 transition-colors disabled:opacity-40">+{d}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Gold */}
       <div className="flex items-center justify-between bg-card border border-border rounded p-2">
         <span className="text-xs text-muted-foreground">Gold</span>
         <span className="font-serif font-bold text-primary" data-testid="text-gold">{campaign?.gold ?? 0} gp</span>
+      </div>
+
+      {/* Rest buttons */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={performShortRest}
+          disabled={updateChar.isPending}
+          className="py-1.5 rounded border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-all font-serif disabled:opacity-40">
+          ⚡ Short Rest
+        </button>
+        <button
+          onClick={performLongRest}
+          disabled={updateChar.isPending}
+          className="py-1.5 rounded border border-primary/40 bg-primary/5 text-xs text-primary hover:bg-primary/10 transition-all font-serif disabled:opacity-40">
+          🌙 Long Rest
+        </button>
       </div>
 
       {editOpen && <EditCharacterModal campaignId={campaignId} onClose={() => setEditOpen(false)} />}
@@ -1735,6 +1935,15 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
       : null;
 
     const newProfBonus = Math.floor((newLevel - 1) / 4) + 2;
+
+    // Recalculate class resource maxes for the new level, preserving current values
+    const existingResources = (char!.classResources as ClassResource[] | null) ?? [];
+    const charSubclassForLevelUp = (char!.subclass ?? null) || ((char!.features as string[] | null)?.[0] ?? null);
+    const updatedResources = getClassResources(
+      char!.class, newLevel, charSubclassForLevelUp,
+      { charisma: char!.charisma }, existingResources,
+    );
+
     await updateChar.mutateAsync({
       campaignId,
       data: {
@@ -1754,6 +1963,8 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
           }
         } : {}),
         ...(newInvocations.length > 0 ? { invocations: [...currentInvocations, ...newInvocations] } : {}),
+        // Update class resource maxes for the new level
+        classResources: updatedResources,
       },
     });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });

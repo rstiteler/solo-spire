@@ -41,6 +41,7 @@ export const characters = pgTable("characters", {
   portraitDescription: text("portrait_description"),
   deathSaves: jsonb("death_saves").$type<{ successes: number; failures: number }>(),
   conditions: jsonb("conditions").$type<string[]>().notNull().default([]),
+  classResources: jsonb("class_resources").$type<{ id: string; name: string; current: number; max: number; rechargeOn: string }[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

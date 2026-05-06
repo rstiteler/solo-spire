@@ -46,6 +46,14 @@ export type CharacterCompanion = {
 
 export type CharacterDeathSaves = { [key: string]: unknown } | null;
 
+export type CharacterClassResourcesItem = {
+  id: string;
+  name: string;
+  current: number;
+  max: number;
+  rechargeOn: string;
+};
+
 export interface Character {
   id: number;
   campaignId: number;
@@ -84,6 +92,7 @@ export interface Character {
   portraitDescription?: string | null;
   deathSaves?: CharacterDeathSaves;
   conditions: string[];
+  classResources?: CharacterClassResourcesItem[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -206,6 +215,14 @@ export type UpdateCharacterBodyCompanion = {
 
 export type UpdateCharacterBodyDeathSaves = { [key: string]: unknown } | null;
 
+export type UpdateCharacterBodyClassResourcesItem = {
+  id: string;
+  name: string;
+  current: number;
+  max: number;
+  rechargeOn: string;
+};
+
 export interface UpdateCharacterBody {
   name?: string;
   race?: string;
@@ -242,6 +259,7 @@ export interface UpdateCharacterBody {
   portraitDescription?: string | null;
   deathSaves?: UpdateCharacterBodyDeathSaves;
   conditions?: string[];
+  classResources?: UpdateCharacterBodyClassResourcesItem[] | null;
 }
 
 export interface SaveCampaignBody {

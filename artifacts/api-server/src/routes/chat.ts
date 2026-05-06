@@ -109,8 +109,10 @@ HP TRACKING:
 SPELLCASTING:
 - Track spell slot usage. When the player casts a spell, remind them which slot level was used.
 - Note when spell concentration is required and broken.
-- Short rest: Warlocks recover all spell slots. Other classes: Hit Die recovery.
-- Long rest: All spell slots and HP fully recovered.
+- Short rest: Warlocks recover all spell slots. Monks recover ki points. Fighters recover Second Wind and Action Surge. Druids recover Wild Shape. Bards (level 5+) recover Bardic Inspiration. Clerics/Paladins recover Channel Divinity. Other classes: Hit Die recovery.
+- Long rest: All spell slots, HP, and ALL class resources fully recovered.
+- When the player uses a class resource (rage, ki, bardic inspiration, etc.), include "resources": [{"id":"<resource_id>","current":<new_value>}] in STATE_UPDATE.
+- When the player rests, include the restored resources in STATE_UPDATE "resources" array.
 
 TONE:
 - Rich, atmospheric prose for descriptions.
@@ -194,6 +196,11 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
           contextBlock += `\nDeath Saves: ${ds.successes} successes, ${ds.failures} failures`;
         }
       }
+      if (character.classResources && (character.classResources as { id: string; name: string; current: number; max: number; rechargeOn: string }[]).length > 0) {
+        const crs = character.classResources as { id: string; name: string; current: number; max: number; rechargeOn: string }[];
+        const crText = crs.map(r => `${r.name}: ${r.current}/${r.max === 99 ? "∞" : r.max} (${r.rechargeOn} rest)`).join(", ");
+        contextBlock += `\nClass Resources: ${crText}`;
+      }
     }
     const activeQuests = questList.filter(q => q.status === "active");
     if (activeQuests.length > 0) contextBlock += `\nActive Quests: ${activeQuests.map(q => q.title).join(", ")}`;
@@ -256,6 +263,7 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       xp?: number;
       gold?: number;
       items?: Array<{ action: string; name: string; itemType?: string; quantity?: number }>;
+      resources?: Array<{ id: string; current: number }>;
     } | null = null;
     let levelUp = false;
     let newLevelInfo: { newLevel: number; hitDie: number } | null = null;
@@ -354,6 +362,17 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
               }
             }
           }
+        }
+
+        // Class resource usage (e.g. rage used, ki spent, bardic inspiration granted)
+        if (stateUpdate.resources && character) {
+          const current = (character.classResources as { id: string; name: string; current: number; max: number; rechargeOn: string }[] | null) ?? [];
+          const updated = current.map(r => {
+            const change = stateUpdate!.resources!.find(x => x.id === r.id);
+            if (!change) return r;
+            return { ...r, current: Math.max(0, Math.min(r.max, change.current)) };
+          });
+          await db.update(characters).set({ classResources: updated, updatedAt: new Date() }).where(eq(characters.campaignId, campaignId));
         }
 
         // Items — only handle "remove" actions; additions are presented as LOOT_OFFER for player to pick up
