@@ -389,6 +389,134 @@ const METAMAGIC_OPTIONS: MetamagicOption[] = [
   { name: "Twinned Spell", cost: "1 SP per spell level (min 1)", description: "Target a second creature with a single-target spell that can't already target multiple creatures." },
 ];
 
+// ─── Subclass Feature Selection Data ─────────────────────────────────────
+
+type SubclassFeatureOption = { name: string; description: string };
+
+// Barbarian — Path of the Totem Warrior
+const TOTEM_SPIRIT_OPTIONS: SubclassFeatureOption[] = [
+  { name: "Bear Totem Spirit", description: "While raging, you have resistance to all damage except psychic. Beasts sense your spiritual kinship." },
+  { name: "Eagle Totem Spirit", description: "While raging, Dash and Disengage as bonus actions; opportunity attacks against you have disadvantage unless you are incapacitated." },
+  { name: "Wolf Totem Spirit", description: "While raging, your allies have advantage on melee attack rolls against creatures within 5 ft. of you." },
+];
+const ASPECT_BEAST_OPTIONS: SubclassFeatureOption[] = [
+  { name: "Bear Aspect", description: "Your carrying capacity doubles and you have advantage on Strength checks and Strength saving throws." },
+  { name: "Eagle Aspect", description: "You can see up to 1 mile clearly, and dim light doesn't impose disadvantage on your Perception checks." },
+  { name: "Wolf Aspect", description: "You can track other creatures while traveling at fast pace, and move stealthily at a normal pace." },
+];
+const TOTEMIC_ATTUNEMENT_OPTIONS: SubclassFeatureOption[] = [
+  { name: "Bear Totemic Attunement", description: "While raging, any creature within 5 ft. that is hostile to you has disadvantage on attacks against targets other than you." },
+  { name: "Eagle Totemic Attunement", description: "While raging, you have a flying speed equal to your walking speed. You fall if you end your turn in the air." },
+  { name: "Wolf Totemic Attunement", description: "While raging, bonus action: knock a Large or smaller creature prone when you hit it with a melee weapon attack." },
+];
+
+// Fighter — Battle Master
+const BATTLE_MASTER_MANEUVERS: SubclassFeatureOption[] = [
+  { name: "Commander's Strike", description: "Forgo one attack to let an ally use their reaction to make a weapon attack; add your Superiority Die to their damage." },
+  { name: "Disarming Attack", description: "Add Superiority Die to damage; target makes a STR save or drops one item of your choice." },
+  { name: "Distracting Strike", description: "Add Superiority Die to damage; next attack roll against the target before your next turn has advantage." },
+  { name: "Evasive Footwork", description: "Move up to your speed; add the Superiority Die to your AC until you stop moving." },
+  { name: "Feinting Attack", description: "Bonus action: gain advantage on your next attack against an adjacent creature and add Superiority Die to damage on a hit." },
+  { name: "Goading Attack", description: "Add Superiority Die to damage; target makes a WIS save or has disadvantage on all attacks against targets other than you until your next turn." },
+  { name: "Lunging Attack", description: "Spend Superiority Die to extend your melee reach by 5 ft. for one attack; add the die to damage on a hit." },
+  { name: "Maneuvering Attack", description: "Add Superiority Die to damage; one friendly creature can use its reaction to move half its speed without provoking opportunity attacks." },
+  { name: "Menacing Attack", description: "Add Superiority Die to damage; target makes a WIS save or is frightened of you until your next turn." },
+  { name: "Parry", description: "Reaction when hit by a melee attack: reduce the damage by Superiority Die + your DEX modifier." },
+  { name: "Precision Attack", description: "Add the Superiority Die to one attack roll before knowing whether it hits or misses." },
+  { name: "Pushing Attack", description: "Add Superiority Die to damage; target makes a STR save or is pushed up to 15 ft. away from you." },
+  { name: "Rally", description: "Bonus action: give a friendly creature temporary HP equal to Superiority Die + your CHA modifier." },
+  { name: "Riposte", description: "Reaction when missed by a melee attack: make one melee weapon attack against that creature; add Superiority Die to damage." },
+  { name: "Sweeping Attack", description: "On a hit, deal damage equal to the Superiority Die to a second creature adjacent to the first that is also within your reach." },
+  { name: "Trip Attack", description: "Add Superiority Die to damage; target makes a STR save or is knocked prone." },
+];
+const BATTLE_MASTER_MANEUVERS_GAINED: Record<number, number> = { 3: 3, 7: 2, 10: 2, 15: 2 };
+
+// Monk — Way of the Four Elements
+const FOUR_ELEMENTS_DISCIPLINES: SubclassFeatureOption[] = [
+  { name: "Breath of Winter", description: "6 ki: Cast Cone of Cold." },
+  { name: "Clench of the North Wind", description: "3 ki: Cast Hold Person." },
+  { name: "Elemental Attunement", description: "0 ki: Minor elemental effect — extinguish flame, create a breeze, shake earth, or ripple water." },
+  { name: "Eternal Mountain Defense", description: "5 ki: Cast Stoneskin on yourself." },
+  { name: "Fangs of the Fire Snake", description: "1 ki on attack: reach extends 10 ft. and attack deals fire damage. Spend 1 more ki to deal an extra 1d10 fire." },
+  { name: "Fist of Four Thunders", description: "2 ki: Cast Thunderwave." },
+  { name: "Fist of Unbroken Air", description: "2 ki: One creature makes a STR save or takes 3d10 bludgeoning, is pushed 20 ft., and knocked prone (half damage, no push on success)." },
+  { name: "Flames of the Phoenix", description: "4 ki: Cast Fireball." },
+  { name: "Gong of the Summit", description: "3 ki: Cast Shatter." },
+  { name: "Mist Stance", description: "4 ki: Cast Gaseous Form on yourself." },
+  { name: "Ride the Wind", description: "4 ki: Cast Fly on yourself." },
+  { name: "River of Hungry Flame", description: "5 ki: Cast Wall of Fire." },
+  { name: "Rush of the Gale Spirits", description: "2 ki: Cast Gust of Wind." },
+  { name: "Shape the Flowing River", description: "1 ki: Control up to a 30-ft. cube of water — shape it, freeze it, or move it." },
+  { name: "Sweeping Cinder Strike", description: "2 ki: Each creature in a 5-ft. radius around a point within 30 ft. makes a DEX save or takes 2d6 fire damage." },
+  { name: "Water Whip", description: "2 ki: Ranged spell attack (30 ft.): 3d10 bludgeoning + either knock prone or pull 25 ft. toward you." },
+  { name: "Wave of Rolling Earth", description: "6 ki: Cast Wall of Stone." },
+];
+const FOUR_ELEMENTS_DISCIPLINES_GAINED: Record<number, number> = { 3: 2, 6: 1, 11: 1, 17: 1 };
+
+// Ranger — Hunter
+const HUNTER_PREY_OPTIONS: SubclassFeatureOption[] = [
+  { name: "Colossus Slayer", description: "Once per turn, deal +1d8 damage to a creature that is below its hit point maximum." },
+  { name: "Giant Killer", description: "Reaction: when a Large or larger creature within 5 ft. misses you, make one weapon attack against it." },
+  { name: "Horde Breaker", description: "Once per turn, make one additional attack against a second creature within 5 ft. of the first that is also within range." },
+];
+const HUNTER_DEFENSIVE_TACTICS: SubclassFeatureOption[] = [
+  { name: "Escape the Horde", description: "Opportunity attacks against you have disadvantage." },
+  { name: "Multiattack Defense", description: "When a creature hits you, gain +4 AC against all subsequent attacks from that creature for the rest of the turn." },
+  { name: "Steel Will", description: "Advantage on saving throws against being frightened." },
+];
+const HUNTER_MULTIATTACK: SubclassFeatureOption[] = [
+  { name: "Volley", description: "Make a ranged attack against any number of creatures within 10 ft. of a point you can see, using one piece of ammunition per target." },
+  { name: "Whirlwind Attack", description: "Make a melee attack against any number of creatures within 5 ft. of you, making a separate attack roll for each." },
+];
+
+// Bard — College of Swords
+const SWORDS_FIGHTING_STYLES: SubclassFeatureOption[] = [
+  { name: "Dueling", description: "When you are wielding a melee weapon in one hand and no other weapons, gain +2 bonus to damage rolls with that weapon." },
+  { name: "Two-Weapon Fighting", description: "When fighting with two weapons, add your ability modifier to the damage of the off-hand attack." },
+];
+
+// Determine which subclass features to prompt at a given level
+type SubclassFeatureGain = {
+  label: string;
+  options: SubclassFeatureOption[];
+  count: number;
+  key: string;
+};
+
+function getSubclassFeatureGains(charClass: string, subclass: string | null, level: number, knownFeatures: string[]): SubclassFeatureGain[] {
+  const gains: SubclassFeatureGain[] = [];
+  const sub = (subclass ?? "").toLowerCase();
+
+  if (charClass === "Barbarian" && sub.includes("totem")) {
+    if (level === 3)  gains.push({ label: "Totem Spirit", options: TOTEM_SPIRIT_OPTIONS.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "totem-spirit" });
+    if (level === 6)  gains.push({ label: "Aspect of the Beast", options: ASPECT_BEAST_OPTIONS.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "aspect-beast" });
+    if (level === 14) gains.push({ label: "Totemic Attunement", options: TOTEMIC_ATTUNEMENT_OPTIONS.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "totemic-attunement" });
+  }
+
+  if (charClass === "Fighter" && sub.includes("battle master")) {
+    const needed = BATTLE_MASTER_MANEUVERS_GAINED[level] ?? 0;
+    if (needed > 0) gains.push({ label: "Combat Maneuvers", options: BATTLE_MASTER_MANEUVERS.filter(o => !knownFeatures.includes(o.name)), count: needed, key: "maneuver" });
+  }
+
+  if (charClass === "Monk" && sub.includes("four elements")) {
+    const needed = FOUR_ELEMENTS_DISCIPLINES_GAINED[level] ?? 0;
+    if (needed > 0) gains.push({ label: "Elemental Disciplines", options: FOUR_ELEMENTS_DISCIPLINES.filter(o => !knownFeatures.includes(o.name)), count: needed, key: "discipline" });
+  }
+
+  if (charClass === "Ranger" && sub.includes("hunter")) {
+    if (level === 3)  gains.push({ label: "Hunter's Prey", options: HUNTER_PREY_OPTIONS.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "hunters-prey" });
+    if (level === 7)  gains.push({ label: "Defensive Tactics", options: HUNTER_DEFENSIVE_TACTICS.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "defensive-tactics" });
+    if (level === 11) gains.push({ label: "Multi-attack Style", options: HUNTER_MULTIATTACK.filter(o => !knownFeatures.includes(o.name)), count: 1, key: "multiattack" });
+  }
+
+  if (charClass === "Bard" && sub.includes("swords") && level === 3) {
+    const filtered = SWORDS_FIGHTING_STYLES.filter(o => !knownFeatures.includes(o.name));
+    if (filtered.length > 0) gains.push({ label: "Fighting Style", options: filtered, count: 1, key: "fighting-style" });
+  }
+
+  return gains;
+}
+
 // ─── Spell Slot Progression Tables ────────────────────────────────────────
 
 const FULL_CASTER_SLOTS: Record<number, Record<string, number>> = {
@@ -1650,6 +1778,7 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const knownSpells = (char.knownSpells as string[] | null) ?? [];
   const invocations = (char.invocations as string[] | null) ?? [];
   const charMetamagic = (char.metamagic as string[] | null) ?? [];
+  const charSubclassFeatures = (char.subclassFeatures as string[] | null) ?? [];
   const familiar = char.familiar as { type: string; hp: number; maxHp: number; ac: number } | null | undefined;
   const chainInvocations = invocations
     .map(name => ELDRITCH_INVOCATIONS.find(inv => inv.name === name))
@@ -1920,6 +2049,37 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
                     <span className="text-xs font-medium text-foreground">{name}</span>
                   </div>
                   {inv && <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{inv.description}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Subclass Features (Totems, Maneuvers, Disciplines, etc.) */}
+      {charSubclassFeatures.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1.5">
+            {char.class === "Fighter" ? "Combat Maneuvers"
+              : char.class === "Monk" ? "Elemental Disciplines"
+              : char.class === "Barbarian" ? "Totem Features"
+              : char.class === "Ranger" ? "Hunter Features"
+              : "Subclass Features"}
+          </div>
+          <div className="space-y-1">
+            {charSubclassFeatures.map(name => {
+              const allOptions = [
+                ...TOTEM_SPIRIT_OPTIONS, ...ASPECT_BEAST_OPTIONS, ...TOTEMIC_ATTUNEMENT_OPTIONS,
+                ...BATTLE_MASTER_MANEUVERS,
+                ...FOUR_ELEMENTS_DISCIPLINES,
+                ...HUNTER_PREY_OPTIONS, ...HUNTER_DEFENSIVE_TACTICS, ...HUNTER_MULTIATTACK,
+                ...SWORDS_FIGHTING_STYLES,
+              ];
+              const opt = allOptions.find(o => o.name === name);
+              return (
+                <div key={name} className="bg-card border border-border/50 rounded px-2 py-1.5">
+                  <span className="text-xs font-medium text-foreground">{name}</span>
+                  {opt && <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{opt.description}</p>}
                 </div>
               );
             })}
@@ -2292,6 +2452,7 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const [selectedFamiliarType, setSelectedFamiliarType] = useState<string | null>(null);
   const [newInvocations, setNewInvocations] = useState<string[]>([]);
   const [newMetamagic, setNewMetamagic] = useState<string[]>([]);
+  const [newSubclassFeatures, setNewSubclassFeatures] = useState<Record<string, string[]>>({});
 
   if (!char) return null;
 
@@ -2341,7 +2502,13 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const availableMetamagic = METAMAGIC_OPTIONS.filter(m => !knownMetamagicSet.has(m.name));
   const metamagicDone = sorcererMetamagicNeeded === 0 || newMetamagic.length === sorcererMetamagicNeeded;
 
-  const canApply = hpGained !== null && spellsReady && asiDone && pactBoonDone && familiarDone && invocationsDone && metamagicDone;
+  // Subclass feature selections (Totems, Maneuvers, Disciplines, Hunter, etc.)
+  const knownSubclassFeatures = (char.subclassFeatures as string[] | null) ?? [];
+  const modalSubclass = char.subclass ?? (char.features as string[] | null)?.[0] ?? null;
+  const subclassFeatureGains = getSubclassFeatureGains(char.class, modalSubclass, newLevel, knownSubclassFeatures);
+  const subclassFeaturesDone = subclassFeatureGains.every(gain => (newSubclassFeatures[gain.key] ?? []).length === gain.count);
+
+  const canApply = hpGained !== null && spellsReady && asiDone && pactBoonDone && familiarDone && invocationsDone && metamagicDone && subclassFeaturesDone;
 
   function adjustAsi(stat: typeof ASI_STAT_KEYS[number], delta: number) {
     setAsiAlloc(prev => {
@@ -2391,6 +2558,15 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
     );
   }
 
+  function toggleSubclassFeature(key: string, name: string, count: number) {
+    setNewSubclassFeatures(prev => {
+      const current = prev[key] ?? [];
+      if (current.includes(name)) return { ...prev, [key]: current.filter(n => n !== name) };
+      if (current.length >= count) return prev;
+      return { ...prev, [key]: [...current, name] };
+    });
+  }
+
   async function applyLevelUp() {
     if (hpGained === null) return;
     const newMaxHp = (char!.maxHp ?? 10) + hpGained;
@@ -2408,6 +2584,8 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
 
     const currentInvocations = (char!.invocations as string[] | null) ?? [];
     const currentMetamagic = (char!.metamagic as string[] | null) ?? [];
+    const currentSubclassFeatures = (char!.subclassFeatures as string[] | null) ?? [];
+    const allNewSubclassFeatures = Object.values(newSubclassFeatures).flat();
     const selectedFamiliarData = selectedFamiliarType
       ? CHAIN_FAMILIAR_TYPES.find(f => f.name === selectedFamiliarType)
       : null;
@@ -2454,6 +2632,8 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
         ...(newInvocations.length > 0 ? { invocations: [...currentInvocations, ...newInvocations] } : {}),
         // Sorcerer Metamagic
         ...(newMetamagic.length > 0 ? { metamagic: [...currentMetamagic, ...newMetamagic] } : {}),
+        // Subclass Features (Totems, Maneuvers, Disciplines, Hunter, Fighting Style, etc.)
+        ...(allNewSubclassFeatures.length > 0 ? { subclassFeatures: [...currentSubclassFeatures, ...allNewSubclassFeatures] } : {}),
         // Update class resource maxes for the new level
         classResources: updatedResources,
       },
@@ -2690,6 +2870,43 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
               )}
             </div>
           )}
+
+          {/* Subclass Feature Selections (Totems, Maneuvers, Disciplines, Hunter, Fighting Style) */}
+          {subclassFeatureGains.map(gain => {
+            const selected = newSubclassFeatures[gain.key] ?? [];
+            const done = selected.length === gain.count;
+            return (
+              <div key={gain.key} className="bg-background/50 border border-border/60 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest">{gain.label}</div>
+                  <span className={`text-xs font-medium ${done ? "text-primary" : "text-amber-500"}`}>
+                    {selected.length} / {gain.count} chosen
+                  </span>
+                </div>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {gain.options.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">All options already chosen.</p>
+                  ) : gain.options.map(opt => {
+                    const sel = selected.includes(opt.name);
+                    const maxed = selected.length >= gain.count;
+                    return (
+                      <button key={opt.name} onClick={() => toggleSubclassFeature(gain.key, opt.name, gain.count)}
+                        disabled={!sel && maxed}
+                        className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : maxed ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50"}`}>
+                        <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{opt.name}</span>
+                        <p className="text-xs text-muted-foreground/80 mt-0.5 leading-snug">{opt.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!done && (
+                  <p className="text-xs text-amber-500">
+                    Choose {gain.count - selected.length} more {gain.label.toLowerCase()} option{gain.count - selected.length !== 1 ? "s" : ""} to continue.
+                  </p>
+                )}
+              </div>
+            );
+          })}
 
           {/* ASI — Ability Score Improvement */}
           {isAsiLevel && (

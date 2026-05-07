@@ -36,6 +36,7 @@ export const characters = pgTable("characters", {
   pactBoon: text("pact_boon"),
   invocations: jsonb("invocations").$type<string[]>().notNull().default([]),
   metamagic: jsonb("metamagic").$type<string[]>().notNull().default([]),
+  subclassFeatures: jsonb("subclass_features").$type<string[]>().notNull().default([]),
   familiar: jsonb("familiar").$type<{ type: string; hp: number; maxHp: number; ac: number } | null>(),
   companion: jsonb("companion").$type<{ mode: string; name: string; primalType?: string; hp: number; maxHp: number; ac: number; attackBonus: number; damage: string } | null>(),
   portraitUrl: text("portrait_url"),
