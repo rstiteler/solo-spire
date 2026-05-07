@@ -93,6 +93,7 @@ export const GetCampaignResponse = zod
           subclass: zod.string().nullish(),
           pactBoon: zod.string().nullish(),
           invocations: zod.array(zod.string()).optional(),
+          metamagic: zod.array(zod.string()).optional(),
           familiar: zod
             .object({
               type: zod.string(),
@@ -274,6 +275,7 @@ export const SaveCampaignBody = zod.object({
       subclass: zod.string().nullish(),
       pactBoon: zod.string().nullish(),
       invocations: zod.array(zod.string()).optional(),
+      metamagic: zod.array(zod.string()).optional(),
       familiar: zod
         .object({
           type: zod.string(),
@@ -416,6 +418,7 @@ export const GetCharacterResponse = zod.object({
   subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
+  metamagic: zod.array(zod.string()).optional(),
   familiar: zod
     .object({
       type: zod.string(),
@@ -492,6 +495,7 @@ export const UpdateCharacterBody = zod.object({
   subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
+  metamagic: zod.array(zod.string()).optional(),
   familiar: zod
     .object({
       type: zod.string(),
@@ -561,6 +565,7 @@ export const UpdateCharacterResponse = zod.object({
   subclass: zod.string().nullish(),
   pactBoon: zod.string().nullish(),
   invocations: zod.array(zod.string()).optional(),
+  metamagic: zod.array(zod.string()).optional(),
   familiar: zod
     .object({
       type: zod.string(),

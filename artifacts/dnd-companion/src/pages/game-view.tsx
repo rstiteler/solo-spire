@@ -372,6 +372,297 @@ const ELDRITCH_INVOCATIONS: Invocation[] = [
 // New invocations granted at each Warlock level (total kept for reference; this is the delta)
 const WARLOCK_NEW_INVOCATIONS: Record<number, number> = { 2: 2, 5: 1, 7: 1, 9: 1, 12: 1, 15: 1, 18: 1 };
 
+// ─── Sorcerer Metamagic ───────────────────────────────────────────────────
+
+// New Metamagic options gained at each Sorcerer level
+const SORCERER_NEW_METAMAGIC: Record<number, number> = { 3: 2, 10: 1, 17: 1 };
+
+type MetamagicOption = { name: string; cost: string; description: string };
+const METAMAGIC_OPTIONS: MetamagicOption[] = [
+  { name: "Careful Spell", cost: "1 SP", description: "Choose up to CHA mod creatures — they automatically succeed on saving throws against the spell." },
+  { name: "Distant Spell", cost: "1 SP", description: "Double the range of a spell, or change its range from touch to 30 ft." },
+  { name: "Empowered Spell", cost: "1 SP", description: "Reroll up to CHA mod damage dice for the spell, keeping the new results. Can combine with other metamagic." },
+  { name: "Extended Spell", cost: "1 SP", description: "Double the duration of a concentration spell, up to a maximum of 24 hours." },
+  { name: "Heightened Spell", cost: "3 SP", description: "One creature targeted by the spell has disadvantage on their first saving throw against it." },
+  { name: "Quickened Spell", cost: "2 SP", description: "Change a spell with a casting time of 1 action into a bonus action." },
+  { name: "Subtle Spell", cost: "1 SP", description: "Cast a spell without any verbal or somatic components — undetectable even under scrutiny." },
+  { name: "Twinned Spell", cost: "1 SP per spell level (min 1)", description: "Target a second creature with a single-target spell that can't already target multiple creatures." },
+];
+
+// ─── Spell Slot Progression Tables ────────────────────────────────────────
+
+const FULL_CASTER_SLOTS: Record<number, Record<string, number>> = {
+  1:  { "1": 2 },
+  2:  { "1": 3 },
+  3:  { "1": 4, "2": 2 },
+  4:  { "1": 4, "2": 3 },
+  5:  { "1": 4, "2": 3, "3": 2 },
+  6:  { "1": 4, "2": 3, "3": 3 },
+  7:  { "1": 4, "2": 3, "3": 3, "4": 1 },
+  8:  { "1": 4, "2": 3, "3": 3, "4": 2 },
+  9:  { "1": 4, "2": 3, "3": 3, "4": 3, "5": 1 },
+  10: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2 },
+  11: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1 },
+  12: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1 },
+  13: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1, "7": 1 },
+  14: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1, "7": 1 },
+  15: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1, "7": 1, "8": 1 },
+  16: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1, "7": 1, "8": 1 },
+  17: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2, "6": 1, "7": 1, "8": 1, "9": 1 },
+  18: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 3, "6": 1, "7": 1, "8": 1, "9": 1 },
+  19: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 3, "6": 2, "7": 1, "8": 1, "9": 1 },
+  20: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 3, "6": 2, "7": 2, "8": 1, "9": 1 },
+};
+
+const HALF_CASTER_SLOTS: Record<number, Record<string, number>> = {
+  1:  {},
+  2:  { "1": 2 },
+  3:  { "1": 3 },
+  4:  { "1": 3 },
+  5:  { "1": 4, "2": 2 },
+  6:  { "1": 4, "2": 2 },
+  7:  { "1": 4, "2": 3 },
+  8:  { "1": 4, "2": 3 },
+  9:  { "1": 4, "2": 3, "3": 2 },
+  10: { "1": 4, "2": 3, "3": 2 },
+  11: { "1": 4, "2": 3, "3": 3 },
+  12: { "1": 4, "2": 3, "3": 3 },
+  13: { "1": 4, "2": 3, "3": 3, "4": 1 },
+  14: { "1": 4, "2": 3, "3": 3, "4": 1 },
+  15: { "1": 4, "2": 3, "3": 3, "4": 2 },
+  16: { "1": 4, "2": 3, "3": 3, "4": 2 },
+  17: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 1 },
+  18: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 1 },
+  19: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2 },
+  20: { "1": 4, "2": 3, "3": 3, "4": 3, "5": 2 },
+};
+
+const WARLOCK_PACT_SLOTS: Record<number, Record<string, number>> = {
+  1:  { "1": 1 },
+  2:  { "1": 2 },
+  3:  { "2": 2 },
+  4:  { "2": 2 },
+  5:  { "3": 2 },
+  6:  { "3": 2 },
+  7:  { "4": 2 },
+  8:  { "4": 2 },
+  9:  { "5": 2 },
+  10: { "5": 2 },
+  11: { "5": 3 },
+  12: { "5": 3 },
+  13: { "5": 3 },
+  14: { "5": 3 },
+  15: { "5": 3 },
+  16: { "5": 3 },
+  17: { "5": 4 },
+  18: { "5": 4 },
+  19: { "5": 4 },
+  20: { "5": 4 },
+};
+
+function getSpellSlotsForLevel(charClass: string, level: number): Record<string, number> | null {
+  if (["Bard", "Cleric", "Druid", "Sorcerer", "Wizard"].includes(charClass))
+    return FULL_CASTER_SLOTS[level] ?? null;
+  if (["Paladin", "Ranger"].includes(charClass))
+    return HALF_CASTER_SLOTS[level] ?? null;
+  if (charClass === "Warlock")
+    return WARLOCK_PACT_SLOTS[level] ?? null;
+  return null;
+}
+
+// ─── Spell Descriptions ───────────────────────────────────────────────────
+
+const SPELL_DESCRIPTIONS: Record<string, string> = {
+  // Cantrips
+  "Acid Splash": "Hurl a bubble of acid; DEX save or 1d6 acid damage (can hit two adjacent creatures).",
+  "Blade Ward": "Until your next turn, you have resistance to bludgeoning, piercing, and slashing damage from weapons.",
+  "Booming Blade": "Melee weapon attack; if target moves before your next turn, it takes 1d8 thunder damage.",
+  "Chill Touch": "Ranged spell attack; 1d8 necrotic damage, target can't regain HP until your next turn.",
+  "Dancing Lights": "Create up to 4 floating torch-lights you can move up to 60 ft per turn.",
+  "Druidcraft": "Minor natural effects: predict weather, bloom a flower, snuff a flame, or create a harmless sensory effect.",
+  "Eldritch Blast": "Beam of crackling energy; ranged spell attack for 1d10 force damage (gains beams at higher levels).",
+  "Fire Bolt": "Ranged spell attack; 1d10 fire damage. Can ignite unattended flammable objects.",
+  "Friends": "Advantage on CHA checks against one non-hostile creature for 1 minute; it may become hostile afterward.",
+  "Green-Flame Blade": "Melee weapon attack; on hit, green fire leaps to a nearby creature dealing CHA mod fire damage.",
+  "Guidance": "Touch a creature; it adds 1d4 to one ability check before the spell ends.",
+  "Light": "An object sheds bright light in a 20 ft radius for 1 hour.",
+  "Mage Hand": "Spectral hand manipulates objects, opens containers, or retrieves items within 30 ft.",
+  "Mending": "Repair a single break or tear in an object without a trace.",
+  "Message": "Whisper a message to a creature within 120 ft; only they hear it and may whisper a reply.",
+  "Minor Illusion": "Create a sound or still image within 30 ft for 1 minute; Investigation check to disbelieve.",
+  "Poison Spray": "Puff of noxious gas; CON save or 1d12 poison damage.",
+  "Prestidigitation": "Minor magical tricks: clean/soil items, light/snuff flames, chill/warm food, make small sensory effects.",
+  "Produce Flame": "A flame appears in your hand (light); hurl it as a ranged spell attack for 1d8 fire damage.",
+  "Ray of Frost": "Ranged spell attack; 1d8 cold damage and target's speed reduced by 10 ft until your next turn.",
+  "Resistance": "Touch a creature; it adds 1d4 to one saving throw before the spell ends.",
+  "Sacred Flame": "Radiance descends on a creature; DEX save or 1d8 radiant damage (ignores cover).",
+  "Shillelagh": "Your club or quarterstaff becomes magical (1d8, uses WIS for attack/damage) for 1 minute.",
+  "Shocking Grasp": "Melee spell attack; 1d8 lightning damage, target can't take reactions until their next turn.",
+  "Spare the Dying": "Touch a creature at 0 HP to stabilize it instantly.",
+  "Thaumaturgy": "Manifest minor wonders: amplify voice, make eyes glow, cause flames to flicker.",
+  "Thorn Whip": "Melee spell attack; 1d6 piercing damage and pull target 10 ft toward you.",
+  "Thunderclap": "All creatures within 5 ft make a CON save or take 1d6 thunder damage.",
+  "Toll the Dead": "WIS save or 1d8 necrotic (1d12 if the target is missing HP).",
+  "True Strike": "Advantage on your next attack roll against the target before your next turn.",
+  "Vicious Mockery": "WIS save or 1d4 psychic damage and disadvantage on their next attack roll.",
+  "Word of Radiance": "Creatures of your choice within 5 ft make a CON save or take 1d6 radiant.",
+  // Level 1
+  "Absorb Elements": "Reaction: halve incoming elemental damage and deal 1d6 of that type extra on your next melee hit.",
+  "Alarm": "Set an alarm at a point; you are alerted mentally or by a bell when a Tiny or larger creature passes through.",
+  "Animal Friendship": "Beast WIS save or it can't attack you for 24 hours.",
+  "Armor of Agathys": "Gain 5 temp HP; while you have them, melee attackers take 5 cold damage.",
+  "Arms of Hadar": "Tendrils erupt; creatures within 10 ft make STR save or take 2d6 necrotic and lose reactions.",
+  "Bane": "Up to 3 creatures CHA save or subtract 1d4 from attacks and saves for 1 minute.",
+  "Bless": "Up to 3 creatures add 1d4 to attack rolls and saving throws for 1 minute.",
+  "Burning Hands": "15 ft cone; DEX save or 3d6 fire damage (half on success).",
+  "Cause Fear": "WIS save or one creature is frightened of you for 1 minute (re-saves each turn).",
+  "Charm Person": "WIS save or a humanoid is charmed as a friendly acquaintance for 1 hour.",
+  "Chromatic Orb": "Ranged spell attack; 3d8 damage of your chosen energy type.",
+  "Color Spray": "Blinding burst hits 6d10 HP worth of creatures in a 15 ft cone — blinded until your next turn.",
+  "Command": "WIS save or a creature obeys a one-word command (drop, flee, grovel, halt, kneel) on its next turn.",
+  "Compelled Duel": "WIS save or creature must attack only you and can't willingly move away for 1 minute.",
+  "Comprehend Languages": "Understand any spoken language you hear or written language you see for 1 hour.",
+  "Create or Destroy Water": "Create 10 gallons of water in a container, or destroy that much in an open container.",
+  "Cure Wounds": "Touch a creature to restore 1d8 + spellcasting mod HP.",
+  "Detect Evil and Good": "For 10 minutes, sense the presence and type of aberrations, celestials, elementals, fey, fiends, or undead within 30 ft.",
+  "Detect Magic": "For 10 minutes, sense magic within 30 ft and learn the school of any aura you can see.",
+  "Detect Poison and Disease": "For 10 minutes, sense poisonous creatures, poisons, and diseases within 30 ft.",
+  "Disguise Self": "Change your appearance (features, clothing, height) for 1 hour — doesn't withstand touch.",
+  "Dissonant Whispers": "WIS save or 3d6 psychic damage and flee in terror (half/no movement on success).",
+  "Divine Favor": "Your weapon attacks deal +1d4 radiant damage for 1 minute.",
+  "Earth Tremor": "Creatures in 10 ft radius DEX save or 1d6 bludgeoning and knocked prone (on loose ground).",
+  "Ensnaring Strike": "On your next weapon hit, target STR save or restrained by vines until the spell ends.",
+  "Expeditious Retreat": "Your speed increases by 30 ft; you can Dash as a bonus action for 10 minutes.",
+  "Faerie Fire": "Creatures in a 20 ft cube are outlined in light — attacks against them have advantage, no invisibility.",
+  "False Life": "Gain 1d4+4 temporary HP for 1 hour.",
+  "Feather Fall": "Reaction; up to 5 falling creatures slow to 60 ft/round and take no fall damage.",
+  "Fog Cloud": "20 ft radius of thick fog, heavily obscured, lasts up to 1 hour (concentration).",
+  "Goodberry": "Up to 10 berries appear, each restoring 1 HP; 10 berries sustain a creature for a day.",
+  "Grease": "10 ft square becomes slick; DEX save to avoid falling prone when entering or starting a turn there.",
+  "Guiding Bolt": "Ranged spell attack; 4d6 radiant damage, and next attack roll against the target has advantage.",
+  "Hail of Thorns": "On your next ranged hit, a burst of thorns; target and nearby creatures DEX save or 1d10 piercing.",
+  "Healing Word": "Bonus action; a creature within 60 ft regains 1d4 + spellcasting mod HP.",
+  "Hellish Rebuke": "Reaction when damaged; attacker makes DEX save or takes 2d10 fire damage (half on success).",
+  "Heroism": "Creature immune to fright and gains temp HP equal to your spellcasting mod each turn for 1 minute.",
+  "Hex": "Curse a creature: +1d6 necrotic on each of your attacks; disadvantage on one chosen ability check.",
+  "Hunter's Mark": "Mark a target: +1d6 weapon damage against it; advantage on Perception/Survival to find it.",
+  "Identify": "Learn the properties, attunement requirements, and command words of a magic item or spell.",
+  "Inflict Wounds": "Melee spell attack; 3d10 necrotic damage.",
+  "Jump": "Triple a creature's long jump distance for 1 minute.",
+  "Longstrider": "Increase a creature's speed by 10 ft for 1 hour.",
+  "Mage Armor": "Unarmored creature's AC becomes 13 + DEX mod for 8 hours.",
+  "Magic Missile": "Three darts each deal 1d4+1 force damage and automatically hit (no attack roll).",
+  "Protection from Evil and Good": "Protected creature has advantage on saves and attackers have disadvantage vs. aberrations, celestials, elementals, fey, fiends, and undead.",
+  "Purify Food and Drink": "Purify up to 5 ft of food and drink, neutralizing all poison and disease.",
+  "Ray of Sickness": "Ranged spell attack; 2d8 poison damage; on hit, CON save or poisoned until end of their next turn.",
+  "Sanctuary": "Creatures must WIS save to attack the warded creature; ward ends if it attacks or casts on a foe.",
+  "Searing Smite": "Next weapon hit: +1d6 fire damage, then 1d6 fire at start of each turn (CON save to end).",
+  "Shield": "Reaction: +5 AC until your next turn and no damage from Magic Missile.",
+  "Shield of Faith": "A creature gains +2 AC for up to 10 minutes.",
+  "Silent Image": "Visual illusion up to 15 ft cube; you can move it 20 ft as a bonus action each turn.",
+  "Sleep": "Send 5d8 HP worth of creatures to sleep, starting with the lowest current HP.",
+  "Speak with Animals": "For 10 minutes, understand and speak with beasts (limited by their intelligence).",
+  "Tasha's Hideous Laughter": "WIS save or fall prone laughing, incapacitated, can't stand (re-saves each turn).",
+  "Thunderous Smite": "Next weapon hit: +2d6 thunder damage; STR save or pushed 10 ft and knocked prone.",
+  "Thunderwave": "15 ft cube; CON save or 2d8 thunder and pushed 10 ft (half/no push on success).",
+  "Unseen Servant": "Invisible mindless force performs simple tasks within 60 ft for 1 hour.",
+  "Witch Bolt": "Ranged spell attack; 1d12 lightning on hit; action on later turns to deal 1d12 automatically.",
+  "Wrathful Smite": "Next weapon hit: +1d6 psychic; WIS save or frightened of you (re-saves each turn).",
+  // Level 2
+  "Aid": "Up to 3 creatures gain +5 HP max and current HP for 8 hours.",
+  "Alter Self": "Transform: Aquatic Adaptation, Change Appearance, or Natural Weapons (+1d6) for 1 hour.",
+  "Animal Messenger": "Send a Tiny beast as a messenger with a 25-word message to a specific location.",
+  "Augury": "Receive a one-word omen (Weal/Woe/Both/Nothing) about a course of action.",
+  "Barkskin": "Creature's AC can't be lower than 16 for 1 hour.",
+  "Blindness/Deafness": "CON save or a creature is blinded or deafened for 1 minute (re-saves each turn).",
+  "Blur": "Attacks against you have disadvantage for 1 minute unless the attacker doesn't rely on sight.",
+  "Branding Smite": "Next weapon hit: +2d6 radiant and creature sheds light, can't turn invisible; takes 2d6 radiant each turn.",
+  "Calm Emotions": "Humanoids in 20 ft CHA save or lose charm/fright effects, or become indifferent to non-threats.",
+  "Cloud of Daggers": "5 ft cube of whirling daggers for 1 minute; creatures entering or starting there take 4d4 slashing.",
+  "Cordon of Arrows": "Up to 4 arrows animate and shoot nearby intruders; DEX save or 1d6 piercing.",
+  "Crown of Madness": "WIS save or charmed humanoid attacks the nearest creature (not you) each turn.",
+  "Darkness": "Magical darkness, 15 ft radius, blocks darkvision unless magical; lasts 10 minutes.",
+  "Darkvision": "Touch a creature; it gains darkvision 60 ft for 8 hours.",
+  "Detect Thoughts": "Read surface thoughts of nearby creatures; probe deeper with a WIS save.",
+  "Enhance Ability": "Touch a creature: advantage on all checks of one chosen ability score for 1 hour.",
+  "Enlarge/Reduce": "CON save or creature doubles in size (+1d4 weapon damage, advantage on STR) or halves (-1d4, disadvantage).",
+  "Enthrall": "WIS save or creature has disadvantage on Perception checks not targeting you for 1 minute.",
+  "Find Steed": "Summon a loyal steed (warhorse, pony, camel, elk, or mastiff) bonded to you.",
+  "Find Traps": "Sense the presence of any trap within line of sight.",
+  "Flame Blade": "Fiery sword appears in your hand; melee spell attack for 3d6 fire; sheds bright light.",
+  "Flaming Sphere": "5 ft fire sphere; bonus action to move 30 ft; 2d6 fire on DEX save to adjacent creatures.",
+  "Gentle Repose": "Preserve a corpse for 10 days and extend the time limit for raising the dead.",
+  "Gust of Wind": "60 ft line of wind; moving against it halves speed; sustained with bonus action.",
+  "Heat Metal": "Searing hot metal object; 2d8 fire damage (CON save or drop it); bonus action to reapply.",
+  "Hold Person": "WIS save or a humanoid is paralyzed for 1 minute (re-saves each turn).",
+  "Invisibility": "Touch a creature; it becomes invisible until it attacks, casts, or 1 hour passes.",
+  "Knock": "Touch a locked object to open it; or end one effect preventing passage.",
+  "Lesser Restoration": "Touch a creature to end one disease or one of: blinded, deafened, paralyzed, or poisoned.",
+  "Levitate": "CON save (unwilling); creature or object rises up to 20 ft and can be moved 20 ft/turn for 10 minutes.",
+  "Locate Animals or Plants": "Learn direction and distance of the nearest named beast or plant within 5 miles.",
+  "Locate Object": "Sense direction of a specific object within 1000 ft for 10 minutes.",
+  "Magic Weapon": "A nonmagical weapon gains +1 to attack and damage for 1 hour.",
+  "Melf's Acid Arrow": "Ranged spell attack; 4d4 acid on hit + 2d4 at end of target's next turn.",
+  "Mirror Image": "3 illusory duplicates; attackers must hit the right one; duplicates destroyed on successful hit.",
+  "Misty Step": "Bonus action; teleport up to 30 ft to an unoccupied space you can see.",
+  "Moonbeam": "Pale beam in a 5 ft cylinder; CON save or 2d10 radiant on entry or start of turn there.",
+  "Pass Without Trace": "Up to 10 creatures gain +10 to Stealth and can't be tracked nonmagically for 1 hour.",
+  "Phantasmal Force": "INT save or creature believes an illusion is real and takes 1d6 psychic at start of each turn.",
+  "Prayer of Healing": "Up to 6 creatures regain 2d8 + spellcasting mod HP (10-minute cast).",
+  "Protection from Poison": "Neutralize one poison on touch, then advantage on poison saves and resistance for 1 hour.",
+  "Ray of Enfeeblement": "Ranged spell attack; target's weapon attacks deal half damage (CON save each turn to end).",
+  "Scorching Ray": "Create 3 rays; ranged spell attack per ray for 2d6 fire each.",
+  "See Invisibility": "For 1 hour, see invisible creatures/objects and into the Ethereal Plane.",
+  "Shatter": "10 ft sphere; CON save or 3d8 thunder damage (half on success); disadvantage for inorganic creatures.",
+  "Silence": "20 ft sphere of silence for 10 minutes; no verbal spell components possible inside.",
+  "Spike Growth": "20 ft radius becomes difficult terrain; creatures moving through take 2d4 piercing per 5 ft.",
+  "Spider Climb": "Creature gains climb speed equal to movement and can walk on ceilings for 1 hour.",
+  "Spiritual Weapon": "Floating weapon attacks for 1d8 + spellcasting mod force as a bonus action each turn.",
+  "Suggestion": "WIS save or creature follows a reasonable magical suggestion for up to 8 hours.",
+  "Web": "20 ft cube of webs; STR save or restrained (can attempt to break free with another check).",
+  "Zone of Truth": "20 ft sphere; CHA save or creature can't tell deliberate lies while inside.",
+  // Level 3
+  "Animate Dead": "Animate a corpse or bones as a skeleton or zombie servant under your control for 24 hours.",
+  "Beacon of Hope": "Targets have advantage on WIS saves and death saves; healing maximized.",
+  "Bestow Curse": "Touch attack; choose: disadvantage on checks/saves, vulnerability to damage type, waste actions, or +1d8 necrotic from your attacks.",
+  "Blink": "Roll d20 at end of each turn; 11+ vanishes to Ethereal Plane until start of your next turn.",
+  "Call Lightning": "Storm cloud overhead; bonus action to call a bolt each round for 3d10 lightning (DEX save).",
+  "Clairvoyance": "Create invisible sensor within 1 mile; see or hear through it for 10 minutes.",
+  "Conjure Animals": "Summon fey spirits as beasts with combined CR ≤ 2; they obey your verbal commands.",
+  "Counterspell": "Reaction: automatically counter a spell level 3 or lower; ability check for higher levels.",
+  "Create Food and Water": "Conjure 45 lbs of food and 30 gallons of water for 15 humanoids or 5 steeds.",
+  "Daylight": "60 ft sphere of bright light; disperses magical darkness of 3rd level or lower.",
+  "Dispel Magic": "End one spell of 3rd level or lower on a target; ability check for higher levels.",
+  "Fear": "30 ft cone; WIS save or drop held objects and flee for 1 minute.",
+  "Fireball": "20 ft radius explosion; DEX save or 8d6 fire damage (half on success).",
+  "Fly": "Touch a willing creature; it gains a flying speed of 60 ft for 10 minutes.",
+  "Gaseous Form": "Transform into a misty cloud for 1 hour; immune to nonmagical damage, fly 10 ft, can't attack.",
+  "Glyph of Warding": "Inscribe a magical glyph that triggers a spell or deals 5d8 damage when disturbed.",
+  "Haste": "Double speed, +2 AC, advantage on DEX saves, and an extra action (move/melee/hide/dash/use object).",
+  "Hunger of Hadar": "20 ft void sphere; creatures take 2d6 cold at start and 2d6 acid at end of each turn.",
+  "Hypnotic Pattern": "Creatures that see the pattern WIS save or are charmed and incapacitated for 1 minute.",
+  "Lightning Bolt": "100 ft line; DEX save or 8d8 lightning damage (half on success).",
+  "Magic Circle": "10 ft cylinder protects against one creature type; they can't enter or exit willingly.",
+  "Major Image": "Illusion with sound, smell, and temperature up to 20 ft cube that lasts until dispelled.",
+  "Mass Healing Word": "Bonus action; up to 6 creatures regain 1d4 + spellcasting mod HP.",
+  "Meld into Stone": "Step into a Large or larger stone; remain hidden up to 8 hours, aware of surroundings.",
+  "Nondetection": "Hide a creature or object from all divination magic for 8 hours.",
+  "Plant Growth": "Enrich plants in 100 ft for a year, or entangle 100 ft radius in thick overgrowth.",
+  "Protection from Energy": "Touch a creature; resistance to one energy type (acid, cold, fire, lightning, or thunder) for 1 hour.",
+  "Remove Curse": "All curses on a creature or object end; also breaks attunement to a cursed item.",
+  "Sending": "Send a 25-word message to any creature you've met; they can reply.",
+  "Slow": "Up to 6 creatures WIS save or halve speed, -2 AC/DEX saves, lose reactions, one action or bonus action per turn.",
+  "Speak with Dead": "Corpse answers up to 5 questions based on its knowledge in life.",
+  "Speak with Plants": "Plants in 30 ft gain limited senses; can report recent events and help or hinder movement.",
+  "Spirit Guardians": "Spirits swirl in 15 ft; creatures have halved speed; WIS save or 3d8 radiant/necrotic.",
+  "Stinking Cloud": "20 ft cloud of nauseating gas; CON save or waste turn retching, can't take actions.",
+  "Tongues": "Target can understand and speak any language for 1 hour.",
+  "Vampiric Touch": "Melee spell attack; 3d6 necrotic damage and regain HP equal to half damage dealt.",
+  "Water Breathing": "Up to 10 willing creatures can breathe underwater for 24 hours.",
+  "Water Walk": "Up to 10 willing creatures walk on liquid surfaces for 1 hour.",
+  "Wind Wall": "Wall of wind deflects ranged attacks and deals 3d8 bludgeoning to creatures passing through.",
+};
+
 const PACT_BOON_OPTIONS = [
   { key: "Chain", name: "Pact of the Chain", icon: "🐾", description: "Gain Find Familiar. Your familiar can be an Imp, Pseudodragon, Quasit, or Sprite. It can attack via your bonus action." },
   { key: "Blade", name: "Pact of the Blade", icon: "⚔️", description: "Summon a pact weapon as a bonus action. Proficient with it, use CHA for attacks, and it counts as magical." },
@@ -1327,6 +1618,7 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const updateChar = useUpdateCharacter();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
 
   // These must be computed before any conditional return to satisfy Rules of Hooks
   const classResources = char ? ((char.classResources as ClassResource[] | null) ?? []) : [];
@@ -1357,6 +1649,7 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const skills = (char.skillProficiencies as string[] | null) ?? [];
   const knownSpells = (char.knownSpells as string[] | null) ?? [];
   const invocations = (char.invocations as string[] | null) ?? [];
+  const charMetamagic = (char.metamagic as string[] | null) ?? [];
   const familiar = char.familiar as { type: string; hp: number; maxHp: number; ac: number } | null | undefined;
   const chainInvocations = invocations
     .map(name => ELDRITCH_INVOCATIONS.find(inv => inv.name === name))
@@ -1378,6 +1671,14 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   async function setResourceCurrent(id: string, value: number) {
     const updated = classResources.map(r => r.id === id ? { ...r, current: Math.max(0, Math.min(r.max, value)) } : r);
     await updateChar.mutateAsync({ campaignId, data: { classResources: updated } });
+    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+  }
+
+  async function adjustSpellSlot(level: string, delta: number) {
+    const currentUsed = spellSlotsUsed[level] ?? 0;
+    const max = spellSlots[level] ?? 0;
+    const newUsed = Math.max(0, Math.min(max, currentUsed - delta));
+    await updateChar.mutateAsync({ campaignId, data: { spellSlotsUsed: { ...spellSlotsUsed, [level]: newUsed } } });
     await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
   }
 
@@ -1544,17 +1845,37 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
       {Object.keys(spellSlots).length > 0 && (
         <div>
           <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Spell Slots</div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {Object.entries(spellSlots).map(([lvl, max]) => {
-              const used = spellSlotsUsed[lvl] ?? 0;
-              const remaining = max - used;
-              return (
-                <div key={lvl} className="bg-card border border-border rounded p-1.5 text-center">
-                  <div className="text-xs text-muted-foreground">L{lvl}</div>
-                  <div className={`text-sm font-bold ${remaining > 0 ? "text-primary" : "text-muted-foreground/40"}`}>{remaining}/{max}</div>
-                </div>
-              );
-            })}
+          <div className="space-y-2">
+            {Object.entries(spellSlots)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([lvl, max]) => {
+                const used = spellSlotsUsed[lvl] ?? 0;
+                const remaining = max - used;
+                return (
+                  <div key={lvl}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Level {lvl}</span>
+                      <span className={`text-xs font-medium tabular-nums ${remaining > 0 ? "text-primary" : "text-muted-foreground/40"}`}>
+                        {remaining} / {max}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {Array.from({ length: max }, (_, i) => {
+                        const isFilled = i < remaining;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => adjustSpellSlot(lvl, isFilled ? -1 : 1)}
+                            disabled={updateChar.isPending}
+                            title={isFilled ? "Click to expend this slot" : "Click to restore this slot"}
+                            className={`w-4 h-4 rounded-full border transition-all disabled:opacity-40 ${isFilled ? "bg-primary border-primary hover:bg-primary/60" : "bg-transparent border-primary/25 hover:border-primary/60"}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
@@ -1564,7 +1885,23 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
         <div>
           <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1.5">Known Spells</div>
           <div className="flex flex-wrap gap-1">
-            {knownSpells.map(s => <Badge key={s} variant="outline" className="text-xs border-border/50 text-muted-foreground/70 py-0">{s}</Badge>)}
+            {knownSpells.map(s => {
+              const desc = SPELL_DESCRIPTIONS[s];
+              const isExpanded = expandedSpell === s;
+              return (
+                <div key={s} className="w-full">
+                  <button
+                    onClick={() => setExpandedSpell(isExpanded ? null : s)}
+                    className={`px-2 py-0.5 rounded border text-xs transition-all text-left ${isExpanded ? "border-primary/40 bg-primary/10 text-primary" : "border-border/50 text-muted-foreground/70 hover:border-primary/30 hover:text-foreground/80"}`}
+                  >
+                    {s}{desc ? <span className="ml-0.5 opacity-50">▾</span> : ""}
+                  </button>
+                  {isExpanded && desc && (
+                    <p className="mt-0.5 mb-1 px-2 text-xs text-muted-foreground/70 leading-snug italic">{desc}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1583,6 +1920,27 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
                     <span className="text-xs font-medium text-foreground">{name}</span>
                   </div>
                   {inv && <p className="text-xs text-muted-foreground/70 mt-0.5 leading-snug">{inv.description}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Metamagic */}
+      {charMetamagic.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1.5">Metamagic</div>
+          <div className="space-y-1">
+            {charMetamagic.map(name => {
+              const mm = METAMAGIC_OPTIONS.find(m => m.name === name);
+              return (
+                <div key={name} className="bg-card border border-border/50 rounded px-2 py-1.5">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs font-medium text-foreground">{name}</span>
+                    {mm && <span className="text-xs text-primary/70 font-medium ml-2 shrink-0">{mm.cost}</span>}
+                  </div>
+                  {mm && <p className="text-xs text-muted-foreground/70 leading-snug">{mm.description}</p>}
                 </div>
               );
             })}
@@ -1933,6 +2291,7 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const [pactBoon, setPactBoon] = useState<string | null>(null);
   const [selectedFamiliarType, setSelectedFamiliarType] = useState<string | null>(null);
   const [newInvocations, setNewInvocations] = useState<string[]>([]);
+  const [newMetamagic, setNewMetamagic] = useState<string[]>([]);
 
   if (!char) return null;
 
@@ -1976,7 +2335,13 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
   const familiarDone = !isWarlockPactLevel || pactBoon !== "Pact of the Chain" || selectedFamiliarType !== null;
   const invocationsDone = warlockInvocationsNeeded === 0 || newInvocations.length === warlockInvocationsNeeded;
 
-  const canApply = hpGained !== null && spellsReady && asiDone && pactBoonDone && familiarDone && invocationsDone;
+  // Sorcerer-specific Metamagic
+  const sorcererMetamagicNeeded = char.class === "Sorcerer" ? (SORCERER_NEW_METAMAGIC[newLevel] ?? 0) : 0;
+  const knownMetamagicSet = new Set((char.metamagic as string[] | null) ?? []);
+  const availableMetamagic = METAMAGIC_OPTIONS.filter(m => !knownMetamagicSet.has(m.name));
+  const metamagicDone = sorcererMetamagicNeeded === 0 || newMetamagic.length === sorcererMetamagicNeeded;
+
+  const canApply = hpGained !== null && spellsReady && asiDone && pactBoonDone && familiarDone && invocationsDone && metamagicDone;
 
   function adjustAsi(stat: typeof ASI_STAT_KEYS[number], delta: number) {
     setAsiAlloc(prev => {
@@ -2019,6 +2384,13 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
     );
   }
 
+  function toggleMetamagic(name: string) {
+    setNewMetamagic(prev =>
+      prev.includes(name) ? prev.filter(m => m !== name)
+        : prev.length < sorcererMetamagicNeeded ? [...prev, name] : prev
+    );
+  }
+
   async function applyLevelUp() {
     if (hpGained === null) return;
     const newMaxHp = (char!.maxHp ?? 10) + hpGained;
@@ -2035,6 +2407,7 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
     }
 
     const currentInvocations = (char!.invocations as string[] | null) ?? [];
+    const currentMetamagic = (char!.metamagic as string[] | null) ?? [];
     const selectedFamiliarData = selectedFamiliarType
       ? CHAIN_FAMILIAR_TYPES.find(f => f.name === selectedFamiliarType)
       : null;
@@ -2049,6 +2422,10 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
       { charisma: char!.charisma }, existingResources,
     );
 
+    // Update spell slots from PHB progression table
+    const newSlots = getSpellSlotsForLevel(char!.class, newLevel);
+    const currentUsedSlots = (char!.spellSlotsUsed as Record<string, number> | null) ?? {};
+
     await updateChar.mutateAsync({
       campaignId,
       data: {
@@ -2057,6 +2434,13 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
         ...(allNewSpells.length > 0 ? { knownSpells: [...currentSpells, ...allNewSpells] } : {}),
         ...asiUpdates,
         ...(manualTrigger ? { level: newLevel, proficiencyBonus: newProfBonus } : {}),
+        // Spell slot progression
+        ...(newSlots && Object.keys(newSlots).length > 0 ? {
+          spellSlots: newSlots,
+          spellSlotsUsed: Object.fromEntries(
+            Object.keys(newSlots).map(lvl => [lvl, Math.min(currentUsedSlots[lvl] ?? 0, newSlots[lvl])])
+          ),
+        } : {}),
         // Warlock
         ...(pactBoon ? { pactBoon } : {}),
         ...(selectedFamiliarData ? {
@@ -2068,6 +2452,8 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
           }
         } : {}),
         ...(newInvocations.length > 0 ? { invocations: [...currentInvocations, ...newInvocations] } : {}),
+        // Sorcerer Metamagic
+        ...(newMetamagic.length > 0 ? { metamagic: [...currentMetamagic, ...newMetamagic] } : {}),
         // Update class resource maxes for the new level
         classResources: updatedResources,
       },
@@ -2263,6 +2649,43 @@ function LevelUpModal({ newLevel, hitDie, campaignId, manualTrigger, onClose }: 
               {!invocationsDone && (
                 <p className="text-xs text-amber-500">
                   Choose {warlockInvocationsNeeded - newInvocations.length} more invocation{warlockInvocationsNeeded - newInvocations.length !== 1 ? "s" : ""} to continue.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Sorcerer — Metamagic Selection */}
+          {sorcererMetamagicNeeded > 0 && (
+            <div className="bg-background/50 border border-border/60 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground uppercase tracking-widest">Choose Metamagic</div>
+                <span className={`text-xs font-medium ${metamagicDone ? "text-primary" : "text-amber-500"}`}>
+                  {newMetamagic.length} / {sorcererMetamagicNeeded} chosen
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground/70 leading-snug">
+                Metamagic lets you spend Sorcery Points to modify spells in powerful ways.
+              </p>
+              <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                {availableMetamagic.map(mm => {
+                  const sel = newMetamagic.includes(mm.name);
+                  const maxed = newMetamagic.length >= sorcererMetamagicNeeded;
+                  return (
+                    <button key={mm.name} onClick={() => toggleMetamagic(mm.name)}
+                      disabled={!sel && maxed}
+                      className={`w-full text-left rounded border p-2 transition-all ${sel ? "border-primary bg-primary/10" : maxed ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50"}`}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className={`text-sm font-medium ${sel ? "text-primary" : "text-foreground"}`}>{mm.name}</span>
+                        <span className="text-xs text-primary/60 font-medium ml-2 shrink-0">{mm.cost}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground/80 leading-snug">{mm.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {!metamagicDone && (
+                <p className="text-xs text-amber-500">
+                  Choose {sorcererMetamagicNeeded - newMetamagic.length} more Metamagic option{sorcererMetamagicNeeded - newMetamagic.length !== 1 ? "s" : ""} to continue.
                 </p>
               )}
             </div>

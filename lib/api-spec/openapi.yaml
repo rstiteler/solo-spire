@@ -630,6 +630,10 @@ components:
           type: array
           items:
             type: string
+        metamagic:
+          type: array
+          items:
+            type: string
         familiar:
           type: object
           nullable: true
@@ -804,6 +808,10 @@ components:
           type: string
           nullable: true
         invocations:
+          type: array
+          items:
+            type: string
+        metamagic:
           type: array
           items:
             type: string

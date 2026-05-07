@@ -86,6 +86,7 @@ export interface Character {
   subclass?: string | null;
   pactBoon?: string | null;
   invocations?: string[];
+  metamagic?: string[];
   familiar?: CharacterFamiliar;
   companion?: CharacterCompanion;
   portraitUrl?: string | null;
@@ -253,6 +254,7 @@ export interface UpdateCharacterBody {
   subclass?: string | null;
   pactBoon?: string | null;
   invocations?: string[];
+  metamagic?: string[];
   familiar?: UpdateCharacterBodyFamiliar;
   companion?: UpdateCharacterBodyCompanion;
   portraitUrl?: string | null;
