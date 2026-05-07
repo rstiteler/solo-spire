@@ -1328,6 +1328,22 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
 
+  // These must be computed before any conditional return to satisfy Rules of Hooks
+  const classResources = char ? ((char.classResources as ClassResource[] | null) ?? []) : [];
+  const charSubclass = char ? ((char.subclass ?? null) || ((char.features as string[] | null)?.[0] ?? null)) : null;
+
+  // Auto-initialize resources for pre-existing characters that have none
+  // Must be before any early return to comply with Rules of Hooks
+  useEffect(() => {
+    if (!char || classResources.length > 0) return;
+    const init = getClassResources(char.class, char.level ?? 1, charSubclass, { charisma: char.charisma }, []);
+    if (init.length === 0) return;
+    updateChar.mutateAsync({ campaignId, data: { classResources: init } })
+      .then(() => queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) }))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [char?.id]);
+
   if (!char) return <div className="p-4 text-muted-foreground text-sm font-serif italic">No character found.</div>;
 
   const lvl = char.level ?? 1;
@@ -1358,20 +1374,6 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
     ? primalEntry.damageFormula(char.proficiencyBonus ?? 2, abilityMod(primalEntry.abilityKey === "str" ? primalEntry.baseStr : primalEntry.baseDex))
     : (companion?.damage ?? "");
   const companionNeedsRecalc = !!(primalEntry && companion && companion.maxHp !== companionMaxHp);
-
-  const classResources = (char.classResources as ClassResource[] | null) ?? [];
-  const charSubclass = (char.subclass ?? null) || ((char.features as string[] | null)?.[0] ?? null);
-
-  // Auto-initialize resources for pre-existing characters that have none
-  useEffect(() => {
-    if (!char || classResources.length > 0) return;
-    const init = getClassResources(char.class, char.level ?? 1, charSubclass, { charisma: char.charisma }, []);
-    if (init.length === 0) return;
-    updateChar.mutateAsync({ campaignId, data: { classResources: init } })
-      .then(() => queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) }))
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [char?.id]);
 
   async function setResourceCurrent(id: string, value: number) {
     const updated = classResources.map(r => r.id === id ? { ...r, current: Math.max(0, Math.min(r.max, value)) } : r);
