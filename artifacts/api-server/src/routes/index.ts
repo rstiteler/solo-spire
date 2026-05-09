@@ -6,6 +6,7 @@ import chatRouter from "./chat";
 import diceRouter from "./dice";
 import questsRouter from "./quests";
 import inventoryRouter from "./inventory";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(chatRouter);
 router.use(diceRouter);
 router.use(questsRouter);
 router.use(inventoryRouter);
+router.use(storageRouter);
 
 export default router;

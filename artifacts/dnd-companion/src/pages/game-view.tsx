@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   useGetCampaign, getGetCampaignQueryKey,
@@ -25,8 +25,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ChevronLeft, Save, Send, Dices, Sword, Shield, Heart, Zap, BookOpen, Package,
   ChevronDown, ChevronUp, User, Star, CheckCircle, XCircle, Minus, Plus,
-  Trash2, PlusCircle, Info, Pencil, Sparkles, X, Gift
+  Trash2, PlusCircle, Info, Pencil, Sparkles, X, Gift, Camera
 } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
 
 type ItemProps = {
   armorType?: "light" | "medium" | "heavy" | "shield";
@@ -884,6 +885,16 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
 
   const [tab, setTab] = useState<"identity" | "stats" | "proficiencies" | "spells" | "abilities" | "warlock" | "ranger" | "familiar">("identity");
   const [saving, setSaving] = useState(false);
+  const [portraitPreview, setPortraitPreview] = useState<string | null>(char?.portraitUrl ?? null);
+  const portraitInputId = useId();
+  const { uploadFile, isUploading: isUploadingPortrait } = useUpload({
+    onSuccess: async (res) => {
+      const url = `/api/storage${res.objectPath}`;
+      setPortraitPreview(url);
+      await updateCharacter.mutateAsync({ campaignId, data: { portraitUrl: url } });
+      await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+    },
+  });
   const [knownSpellsList, setKnownSpellsList] = useState<string[]>(() => (char?.knownSpells as string[] | null) ?? []);
   const [spellSearch, setSpellSearch] = useState("");
   const [warlockInvocationSearch, setWarlockInvocationSearch] = useState("");
@@ -1084,6 +1095,51 @@ function EditCharacterModal({ campaignId, onClose }: { campaignId: number; onClo
 
         {tab === "identity" && (
           <div className="space-y-4">
+            {/* Portrait upload */}
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="w-20 h-20 rounded-full border-2 border-primary/40 bg-card overflow-hidden flex items-center justify-center">
+                  {(portraitPreview || char?.portraitUrl) ? (
+                    <img src={portraitPreview ?? char!.portraitUrl!} alt="Portrait" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-8 h-8 text-muted-foreground/50" />
+                  )}
+                </div>
+                {isUploadingPortrait && (
+                  <div className="absolute inset-0 rounded-full bg-background/70 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Portrait Image</Label>
+                <label htmlFor={portraitInputId} className={`flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-foreground bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-colors ${isUploadingPortrait ? "opacity-50 pointer-events-none" : ""}`}>
+                  <Camera className="w-3.5 h-3.5" />
+                  {isUploadingPortrait ? "Uploading…" : (portraitPreview || char?.portraitUrl) ? "Change Photo" : "Upload Photo"}
+                </label>
+                <input
+                  id={portraitInputId}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await uploadFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                {(portraitPreview || char?.portraitUrl) && (
+                  <button onClick={async () => {
+                    setPortraitPreview(null);
+                    await updateCharacter.mutateAsync({ campaignId, data: { portraitUrl: null } });
+                    await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+                  }} className="text-xs text-muted-foreground/60 hover:text-destructive transition-colors block">
+                    Remove photo
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs text-muted-foreground">Character Name</Label>
@@ -1738,6 +1794,57 @@ function HPBar({ hp, maxHp, tempHp, campaignId }: { hp: number; maxHp: number; t
   );
 }
 
+// ─── Portrait Upload Button ─────────────────────────────────────────────────
+
+function PortraitUploadButton({ campaignId, portraitUrl }: { campaignId: number; portraitUrl: string | null }) {
+  const updateChar = useUpdateCharacter();
+  const queryClient = useQueryClient();
+  const inputId = useId();
+  const [preview, setPreview] = useState<string | null>(portraitUrl);
+
+  const { uploadFile, isUploading } = useUpload({
+    onSuccess: async (res) => {
+      const url = `/api/storage${res.objectPath}`;
+      setPreview(url);
+      await updateChar.mutateAsync({ campaignId, data: { portraitUrl: url } });
+      await queryClient.invalidateQueries({ queryKey: getGetCharacterQueryKey(campaignId) });
+    },
+  });
+
+  const currentUrl = preview ?? portraitUrl;
+
+  return (
+    <div className="relative w-20 h-20 mx-auto mb-2">
+      <div className="w-20 h-20 rounded-full border-2 border-primary/40 bg-card flex items-center justify-center overflow-hidden">
+        {currentUrl ? (
+          <img src={currentUrl} alt="Portrait" className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-8 h-8 text-muted-foreground/50" />
+        )}
+      </div>
+      {isUploading && (
+        <div className="absolute inset-0 rounded-full bg-background/70 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      {!isUploading && (
+        <label htmlFor={inputId}
+          title="Change portrait"
+          className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/10 transition-colors">
+          <Camera className="w-3 h-3 text-muted-foreground hover:text-primary" />
+          <input id={inputId} type="file" accept="image/*" className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              await uploadFile(file);
+              e.target.value = "";
+            }} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 // ─── Character Panel ───────────────────────────────────────────────────────
 
 function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevelUp?: (info: { newLevel: number; hitDie: number }) => void }) {
@@ -1873,9 +1980,8 @@ function CharacterPanel({ campaignId, onLevelUp }: { campaignId: number; onLevel
     <div className="h-full overflow-y-auto px-4 py-4 space-y-5 scrollbar-thin">
       {/* Portrait */}
       <div className="text-center relative">
-        <div className="w-20 h-20 mx-auto rounded-full border-2 border-primary/40 bg-card flex items-center justify-center mb-2 overflow-hidden">
-          {char.portraitUrl ? <img src={char.portraitUrl} alt={char.name} className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-muted-foreground/50" />}
-        </div>
+        <PortraitUploadButton campaignId={campaignId} portraitUrl={char.portraitUrl ?? null} />
+
         <div className="font-serif text-base font-bold text-foreground" data-testid="text-character-name">{char.name}</div>
         <div className="text-xs text-muted-foreground">{char.race} {char.class}</div>
         {(char.features as string[] | null)?.[0] && (
