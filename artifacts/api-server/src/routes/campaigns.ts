@@ -24,7 +24,17 @@ router.get("/campaigns", async (req, res) => {
     const all = await db.select().from(campaigns)
       .where(eq(campaigns.userId, req.userId))
       .orderBy(campaigns.updatedAt);
-    res.json(all.reverse());
+    const reversed = all.reverse();
+
+    // Enrich each campaign with the character's actual level
+    const enriched = await Promise.all(reversed.map(async (c) => {
+      const [char] = await db.select({ level: characters.level })
+        .from(characters)
+        .where(eq(characters.campaignId, c.id));
+      return { ...c, level: char?.level ?? c.level };
+    }));
+
+    res.json(enriched);
   } catch (err) {
     req.log.error({ err }, "Failed to list campaigns");
     res.status(500).json({ error: "Failed to list campaigns" });
