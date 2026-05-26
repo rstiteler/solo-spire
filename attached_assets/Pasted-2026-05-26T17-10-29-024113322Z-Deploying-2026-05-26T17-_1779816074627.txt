@@ -1,0 +1,40 @@
+2026-05-26T17:10:29.024113322Z ==> Deploying...
+2026-05-26T17:10:29.132004791Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-05-26T17:10:51.089259992Z ==> Running 'node dist/index.js'
+2026-05-26T17:10:51.387776815Z node:internal/modules/cjs/loader:1459
+2026-05-26T17:10:51.387793166Z   throw err;
+2026-05-26T17:10:51.387797236Z   ^
+2026-05-26T17:10:51.387800217Z 
+2026-05-26T17:10:51.387803937Z Error: Cannot find module '/opt/render/project/src/artifacts/api-server/dist/index.js'
+2026-05-26T17:10:51.387807767Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1456:15)
+2026-05-26T17:10:51.387810837Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+2026-05-26T17:10:51.387813858Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+2026-05-26T17:10:51.387817188Z     at Module._load (node:internal/modules/cjs/loader:1242:25)
+2026-05-26T17:10:51.387820058Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-05-26T17:10:51.387822918Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-05-26T17:10:51.387825768Z     at node:internal/main/run_main_module:33:47 {
+2026-05-26T17:10:51.387828808Z   code: 'MODULE_NOT_FOUND',
+2026-05-26T17:10:51.387832819Z   requireStack: []
+2026-05-26T17:10:51.387836089Z }
+2026-05-26T17:10:51.388566298Z 
+2026-05-26T17:10:51.388585879Z Node.js v24.14.1
+2026-05-26T17:10:58.108621737Z ==> Exited with status 1
+2026-05-26T17:10:58.112455365Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-05-26T17:11:05.47216498Z ==> Running 'node dist/index.js'
+2026-05-26T17:11:05.762725083Z node:internal/modules/cjs/loader:1459
+2026-05-26T17:11:05.762754115Z   throw err;
+2026-05-26T17:11:05.762758326Z   ^
+2026-05-26T17:11:05.762761896Z 
+2026-05-26T17:11:05.762766256Z Error: Cannot find module '/opt/render/project/src/artifacts/api-server/dist/index.js'
+2026-05-26T17:11:05.762770746Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1456:15)
+2026-05-26T17:11:05.762774497Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+2026-05-26T17:11:05.762778227Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+2026-05-26T17:11:05.762782307Z     at Module._load (node:internal/modules/cjs/loader:1242:25)
+2026-05-26T17:11:05.762786308Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-05-26T17:11:05.762790048Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-05-26T17:11:05.762794058Z     at node:internal/main/run_main_module:33:47 {
+2026-05-26T17:11:05.762798268Z   code: 'MODULE_NOT_FOUND',
+2026-05-26T17:11:05.762802738Z   requireStack: []
+2026-05-26T17:11:05.762806549Z }
+2026-05-26T17:11:05.762810219Z 
+2026-05-26T17:11:05.762813639Z Node.js v24.14.1
