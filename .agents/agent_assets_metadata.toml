@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "h-S_5vHfJaHTkw0WkzGHo"
+uri = "file://supabase-migration.txt"
+type = "text"
+title = "Supabase Migration SQL"
