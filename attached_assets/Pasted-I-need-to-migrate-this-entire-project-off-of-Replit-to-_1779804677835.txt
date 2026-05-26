@@ -1,0 +1,16 @@
+I need to migrate this entire project off of Replit to free hosting because my Replit deployment has been suspended due to billing. The code has already been pushed to GitHub at https://github.com/rstiteler/solo-spire. Here is the complete target stack I want to migrate to:
+- Frontend (React): Vercel (free tier)
+- Backend (Node.js/TypeScript): Render (free tier)
+- Database: Supabase (free PostgreSQL) — replacing Replit's built-in database
+- Image/object storage: Supabase Storage — replacing Replit Object Storage
+- AI DM: Google Gemini API (free tier, Gemini 1.5 Flash) — replacing the current Replit/Anthropic integration
+After migration, all future development will happen via Claude Code on my laptop. I will edit code locally, push changes to GitHub, and Render and Vercel will auto-deploy from there. Please make sure the project is set up to support this workflow cleanly.
+Please help me do the following, one step at a time, explaining what you're doing at each step:
+1. Rewrite the AI integration in lib/integrations-anthropic-ai to use Google Gemini 1.5 Flash instead of Anthropic/Claude. Keep the same DM personality, behavior, and prompting logic — just swap the underlying AI provider. Include proper error handling so that if the Gemini API rate limit is hit or the call fails for any reason, the app shows a friendly message to the user instead of crashing or showing a raw error.
+2. Rewrite the database connection code in lib/db to use Supabase/PostgreSQL instead of Replit's built-in database. Do not change the database structure — replicate it exactly as-is in Supabase.
+3. Rewrite the object storage code in lib/object-storage-web to use Supabase Storage instead of Replit Object Storage.
+4. Export any existing data currently stored in the Replit database so I can import it into Supabase.
+5. Update all environment variables so that my Gemini API key and Supabase credentials can be set in Render's environment settings instead of Replit Secrets. Give me a complete list of every environment variable the app will need after migration.
+6. Make sure the frontend in lib/api-client-react is configured to point to the new Render backend URL.
+7. Walk me through step by step what I need to do on Vercel, Render, Supabase, and Google AI Studio to get this fully deployed, including where to paste each environment variable.
+Important: Please make one change at a time and wait for my confirmation before moving to the next step. Explain what you're changing and why so I can follow along.

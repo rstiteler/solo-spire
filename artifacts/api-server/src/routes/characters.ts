@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { characters, campaigns } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { geminiClient } from "@workspace/integrations-anthropic-ai";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
   GetCharacterParams,
@@ -110,17 +110,11 @@ router.post("/campaigns/:campaignId/character/portrait", async (req, res) => {
       .where(and(eq(campaigns.id, paramsParsed.data.campaignId), eq(campaigns.userId, req.userId)));
     if (!campaign) return void res.status(404).json({ error: "Campaign not found" });
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      messages: [{
-        role: "user",
-        content: `Create a vivid, detailed character portrait description for a D&D 5e character. Write 3-4 paragraphs describing their appearance in rich, atmospheric prose. Include physical features, clothing, bearing, and something that hints at their adventuring life.\n\nCharacter details:\n- Race: ${bodyParsed.data.race}\n- Class: ${bodyParsed.data.class}\n- Description: ${bodyParsed.data.description}\n\nWrite only the portrait description, no preamble or commentary.`
-      }]
-    });
-
-    const block = message.content[0];
-    const description = block.type === "text" ? block.text : "A weathered adventurer with determined eyes.";
+    const portraitModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const portraitResult = await portraitModel.generateContent(
+      `Create a vivid, detailed character portrait description for a D&D 5e character. Write 3-4 paragraphs describing their appearance in rich, atmospheric prose. Include physical features, clothing, bearing, and something that hints at their adventuring life.\n\nCharacter details:\n- Race: ${bodyParsed.data.race}\n- Class: ${bodyParsed.data.class}\n- Description: ${bodyParsed.data.description}\n\nWrite only the portrait description, no preamble or commentary.`
+    );
+    const description = portraitResult.response.text() || "A weathered adventurer with determined eyes.";
 
     await db.update(characters)
       .set({ portraitDescription: description, updatedAt: new Date() })

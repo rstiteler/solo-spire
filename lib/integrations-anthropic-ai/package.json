@@ -4,13 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./batch": "./src/batch/index.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "p-limit": "^7.3.0",
-    "p-retry": "^7.1.1"
+    "@google/generative-ai": "^0.24.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

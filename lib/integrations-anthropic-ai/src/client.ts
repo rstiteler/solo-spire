@@ -1,18 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL) {
+if (!process.env.GEMINI_API_KEY) {
   throw new Error(
-    "AI_INTEGRATIONS_ANTHROPIC_BASE_URL must be set. Did you forget to provision the Anthropic AI integration?",
+    "GEMINI_API_KEY must be set. Get a free key at https://aistudio.google.com/app/apikey",
   );
 }
 
-if (!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY) {
-  throw new Error(
-    "AI_INTEGRATIONS_ANTHROPIC_API_KEY must be set. Did you forget to provision the Anthropic AI integration?",
-  );
-}
-
-export const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
+export const geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);

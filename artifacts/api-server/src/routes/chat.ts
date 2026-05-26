@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { chatMessages, characters, campaigns, quests, inventoryItems } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { geminiClient } from "@workspace/integrations-anthropic-ai";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
   ListMessagesParams,
@@ -228,11 +228,14 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
       diceRolls: bodyParsed.data.diceRolls ?? null,
     });
 
-    const claudeMessages: Array<{ role: "user" | "assistant"; content: string }> = history.map(m => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content,
+    // Build Gemini conversation history (role must alternate user/model)
+    // History excludes the current user message — that is passed to sendMessageStream
+    const geminiHistory = history.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
     }));
-    claudeMessages.push({ role: "user", content: userContent + contextBlock });
+
+    const currentMessage = userContent + contextBlock;
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -241,17 +244,33 @@ router.post("/campaigns/:campaignId/chat", async (req, res) => {
 
     let fullResponse = "";
 
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: DM_SYSTEM_PROMPT,
-      messages: claudeMessages,
+    const model = geminiClient.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: DM_SYSTEM_PROMPT,
     });
 
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        fullResponse += event.delta.text;
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+    const chat = model.startChat({ history: geminiHistory });
+
+    let streamResult;
+    try {
+      streamResult = await chat.sendMessageStream(currentMessage);
+    } catch (aiErr: unknown) {
+      const status = (aiErr as { status?: number })?.status;
+      const message = (aiErr as { message?: string })?.message ?? "";
+      if (status === 429 || message.includes("quota") || message.includes("rate")) {
+        res.write(`data: ${JSON.stringify({ error: "The AI Dungeon Master is taking a short rest — you've hit the free-tier rate limit. Wait a minute and try again." })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ error: "The AI Dungeon Master encountered an error. Please try again." })}\n\n`);
+      }
+      res.end();
+      return;
+    }
+
+    for await (const chunk of streamResult.stream) {
+      const text = chunk.text();
+      if (text) {
+        fullResponse += text;
+        res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
       }
     }
 
