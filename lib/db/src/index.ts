@@ -10,7 +10,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Supabase (and most managed Postgres services) require SSL.
+// Set DATABASE_SSL=true in your environment to enable it.
+const ssl = process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined;
+
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
