@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/dnd-companion run build",
+  "outputDirectory": "artifacts/dnd-companion/dist/public",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile"
+}
